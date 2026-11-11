@@ -100,6 +100,7 @@
             origPreview.src = URL.createObjectURL(lastFile);
             origPreview.style.display = 'block';
             resultBadge.style.display = 'none';
+            isUVOn = false; // I-reset ang UV filter state sa bagong upload
             logBox.innerText = `⏳ Mabilis na sinusuri ang header ng file: ${lastFile.name}...`;
             
             let isFake = false;
@@ -163,7 +164,7 @@
             logBox.innerText = logs.join('\n');
         }
 
-        // Mabilis na pagbasa ng unang 25 characters para sa agarang hatol
+        // Mabilis na pagbasa ng unang characters para sa agarang hatol
         function extractQuickHeader(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -251,10 +252,8 @@
             }
 
             if (isUVOn) {
-                alert("X-ray UV Light Mode: ON - Lumilitaw ang repeating watermark pattern sa loob ng resibo!");
                 applyPatternWatermark(lastFile, canvas);
             } else {
-                alert("X-ray UV Light Mode: OFF");
                 performELA(lastFile, document.getElementById('origPreview'), canvas);
             }
         }
@@ -273,7 +272,7 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.globalCompositeOperation = 'source-over';
 
-                if (globalDecodedLogo.startsWith("data:image")) {
+                if (globalDecodedLogo && globalDecodedLogo.startsWith("data:image")) {
                     const logoImg = new Image();
                     logoImg.onload = () => {
                         const stepX = Math.floor(canvas.width / 4);
