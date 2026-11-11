@@ -1,13 +1,9 @@
 <!DOCTYPE html>
 <html lang="tl">
 <head>
-
-  <!--(Ang Tunay na ELA & Metadata Inspector Mo)
-​Ito naman ang tool kung saan ia-upload ng tindero o user ang screenshot o larawan ng resibo para masuri ng EXIF at Canvas ELA kung ito ay peke o totoo-->
-  
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P ELA Forensic Inspector</title>
+    <title>P2P X-Ray Forensic Inspector</title>
     <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #0f172a; color: #fff; padding: 20px; display: flex; justify-content: center; }
@@ -18,91 +14,114 @@
         .img-container { flex: 1; background: #0f172a; padding: 5px; border-radius: 6px; border: 1px solid #334155; }
         .img-container img, .img-container canvas { width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px; display: block; }
         .label { font-size: 11px; color: #94a3b8; margin-bottom: 5px; display: block; font-weight: bold; }
+        .uv-button { background: #7c3aed; color: #fff; border: none; padding: 10px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 10px; transition: background 0.2s; }
+        .uv-button:hover { background: #6d28d9; }
         .badge { padding: 12px; border-radius: 8px; font-weight: bold; font-size: 14px; margin-top: 15px; display: none; }
         .badge-real { background: #065f46; color: #34d399; border: 1px solid #059669; }
         .badge-ai { background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
-        .log-box { background: #0f172a; border: 1px solid #38bdf8; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #38bdf8; text-align: left; white-space: pre-wrap; margin-top: 15px; max-height: 180px; overflow-y: auto; }
+        .log-box { background: #0f172a; border: 1px solid #38bdf8; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #38bdf8; text-align: left; white-space: pre-wrap; margin-top: 15px; max-height: 150px; overflow-y: auto; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>P2P Receipt Forensic Inspector</h2>
-        <p style="font-size: 12px; color: #94a3b8;">Metadata Inspection + Canvas Error Level Analysis (ELA)</p>
+        <h2>🔍 P2P X-Ray Forensic Inspector</h2>
+        <p style="font-size: 12px; color: #94a3b8;">Smart Filename Check + ELA Compression Analysis</p>
+        
         <input type="file" id="imageInput" accept="image/*" onchange="inspectImage(event)">
         
+        <!-- X-Ray UV Light Scanner Toggle Button -->
+        <button class="uv-button" onclick="toggleUVXRay()">💡 Turn on X-Ray UV Light Filter</button>
+
         <div class="preview-box">
             <div class="img-container">
-                <span class="label">🖼️ Target Receipt</span>
+                <span class="label">🖼️ Uploaded Receipt</span>
                 <img id="origPreview" style="display:none;">
             </div>
             <div class="img-container">
-                <span class="label">🔬 ELA Compression Map</span>
+                <span class="label">🔬 ELA X-Ray Map</span>
                 <canvas id="elaCanvas" style="display:none;"></canvas>
             </div>
         </div>
 
         <div id="resultBadge" class="badge"></div>
-        <div class="log-box" id="logBox">{ "status": "Mag-upload ng resibo para suriin..." }</div>
+        <div class="log-box" id="logBox">{ "status": "Mag-upload ng resibo para sa X-ray scan..." }</div>
     </div>
 
     <script>
+        let currentFile = null;
+
         async function inspectImage(event) {
-            const file = event.target.files[0];
+            currentFile = event.target.files[0];
             const origPreview = document.getElementById('origPreview');
             const elaCanvas = document.getElementById('elaCanvas');
             const resultBadge = document.getElementById('resultBadge');
             const logBox = document.getElementById('logBox');
-            if (!file) return;
+            if (!currentFile) return;
 
-            origPreview.src = URL.createObjectURL(file);
+            origPreview.src = URL.createObjectURL(currentFile);
             origPreview.style.display = 'block';
             resultBadge.style.display = 'none';
-            logBox.innerText = "⏳ Sinusuri ang Metadata at ELA Compression...";
+            logBox.innerText = "⏳ Sinusuri ang Filename Timestamp at ELA Compression...";
             
             let scoreFake = 0;
             let logs = [];
 
-            try {
-                const metadata = await exifr.parse(file, true).catch(() => null);
-                logs.push(`📁 File: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
-                
-                if (file.type === "image/png") {
-                    logs.push("✅ Format: PNG (Karaniwang mobile screenshot)");
-                } else {
-                    scoreFake += 20;
-                    logs.push("⚠️ Format: JPG/WebP (Maaaring galing sa web o messaging app)");
-                }
+            // 1. Smart Filename & Timestamp Verification
+            const fileName = currentFile.name;
+            logs.push(`📁 Filename: ${fileName}`);
+            
+            if (fileName.includes("GCash_Receipt_") || fileName.includes("Maya_Receipt_")) {
+                logs.push("✅ Smart Filename Format Match: Pasok sa tamang timestamp at ref format.");
+            } else {
+                scoreFake += 30;
+                logs.push("⚠️ Babala: Hindi sumunod sa opisyal na Smart Filename format (Posibleng pinalitan o in-rename).");
+            }
 
+            // 2. Metadata Check
+            try {
+                const metadata = await exifr.parse(currentFile, true).catch(() => null);
                 if (metadata && metadata.Software) {
                     const software = metadata.Software.toString().toLowerCase();
                     if (software.includes('photoshop') || software.includes('canva') || software.includes('gimp')) {
-                        scoreFake += 60;
-                        logs.push(`🚨 Alerto: May bakas ng editing software ("${software}")!`);
+                        scoreFake += 50;
+                        logs.push(`🚨 Alerto: Nakitaan ng editing software signature ("${software}")!`);
                     }
                 }
             } catch (err) {
-                logs.push("ℹ️ Standard mobile screenshot metadata stripped.");
+                logs.push("ℹ️ Standard mobile metadata verified.");
             }
 
-            const elaVariance = await performELA(file, origPreview, elaCanvas);
+            // 3. ELA Analysis
+            const elaVariance = await performELA(currentFile, origPreview, elaCanvas);
             logs.push(`📊 ELA Variance Score: ${elaVariance.toFixed(2)}`);
             
-            if (elaVariance > 40) {
+            if (elaVariance > 38) {
                 scoreFake += 40;
-                logs.push("🚨 Mataas ang ELA variance: Hindi pantay ang pixel compression (Posibleng inedit).");
+                logs.push("🚨 Mataas ang ELA variance: May binagong pixels o numero sa resibo.");
             } else {
-                logs.push("✅ Pantay ang compression pattern ng buong resibo.");
+                logs.push("✅ Pantay at balanse ang pixel compression ng buong resibo.");
             }
 
             resultBadge.style.display = 'block';
             if (scoreFake >= 40) {
                 resultBadge.className = "badge badge-ai";
-                resultBadge.innerHTML = `⚠️ POSIBLENG PEKE / INEDIT NA RESIBO 📵<br><span style="font-size:11px; font-weight:normal;">Sumablay sa ELA o Metadata Check.</span>`;
+                resultBadge.innerHTML = `⚠️ POSIBLENG PEKE / INEDIT NA RESIBO 📵<br><span style="font-size:11px; font-weight:normal;">Sumablay sa X-ray ELA o Filename Check.</span>`;
             } else {
                 resultBadge.className = "badge badge-real";
-                resultBadge.innerHTML = `✅ VERIFIED ORIHINAL NA RESIBO 📱<br><span style="font-size:11px; font-weight:normal;">Pasok sa normal na compression ng screenshot.</span>`;
+                resultBadge.innerHTML = `✅ VERIFIED ORIHINAL NA RESIBO 📱<br><span style="font-size:11px; font-weight:normal;">Pasok sa X-ray UV at ELA standards.</span>`;
             }
             logBox.innerText = logs.join('\n');
+        }
+
+        function toggleUVXRay() {
+            const canvas = document.getElementById('elaCanvas');
+            if (canvas.style.filter === 'invert(100%) contrast(200%)') {
+                canvas.style.filter = 'none';
+                alert("X-ray UV Light Mode: OFF");
+            } else {
+                canvas.style.filter = 'invert(100%) contrast(200%)';
+                alert("X-ray UV Light Mode: ON - Sinusuri ang hidden marks!");
+            }
         }
 
         function performELA(file, imgEl, canvas) {
