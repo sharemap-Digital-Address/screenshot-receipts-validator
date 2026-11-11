@@ -224,7 +224,7 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.globalCompositeOperation = 'source-over';
 
-                if (globalDecodedLogo.startsWith("data:image")) {
+                 if (globalDecodedLogo.startsWith("data:image")) {
                     const logoImg = new Image();
                     logoImg.onload = () => {
                         const stepX = Math.floor(canvas.width / 4);
@@ -233,13 +233,22 @@
                         ctx.globalAlpha = 0.22;
                         for (let x = 20; x < canvas.width; x += stepX) {
                             for (let y = 30; y < canvas.height; y += stepY) {
-                                ctx.drawImage(logoImg, x, y, 40, 40);
+                                // Kalkulahin ang aspect ratio para hindi ma-crop ang badge
+                                const hRatio = 40 / logoImg.width;
+                                const vRatio = 40 / logoImg.height;
+                                const ratio = Math.min(hRatio, vRatio);
+                                const centerShiftX = (40 - logoImg.width * ratio) / 2;
+                                const centerShiftY = (40 - logoImg.height * ratio) / 2;
+
+                                ctx.drawImage(logoImg, 0, 0, logoImg.width, logoImg.height, 
+                                              x + centerShiftX, y + centerShiftY, logoImg.width * ratio, logoImg.height * ratio);
                             }
                         }
                         ctx.globalAlpha = 1.0;
                     };
                     logoImg.src = globalDecodedLogo;
-                }
+                 }
+
             };
             img.src = URL.createObjectURL(file);
         }
