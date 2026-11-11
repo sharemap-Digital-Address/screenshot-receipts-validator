@@ -20,16 +20,23 @@
         .badge-real { background: #065f46; color: #34d399; border: 1px solid #059669; }
         .badge-ai { background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
         .log-box { background: #0f172a; border: 1px solid #38bdf8; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #38bdf8; text-align: left; white-space: pre-wrap; margin-top: 15px; max-height: 160px; overflow-y: auto; }
+        .decoded-logo-box { margin-top: 10px; padding: 8px; background: #090d16; border: 1px solid #7c3aed; border-radius: 6px; display: none; align-items: center; justify-content: center; gap: 10px; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>🔍 BSP P2P X-Ray Forensic Inspector</h2>
-        <p style="font-size: 12px; color: #94a3b8;">Smart Filename + Cryptographic Stegano Decoder + ELA</p>
+        <p style="font-size: 12px; color: #94a3b8;">Smart Filename + Cryptographic Logo Decoder + ELA</p>
         
         <input type="file" id="imageInput" accept="image/*" onchange="inspectImage(event)">
         
         <button class="uv-button" onclick="toggleUVXRay()">💡 Turn on X-Ray UV Light Filter</button>
+
+        <!-- Lalabas dito ang Decoded Official Bank/E-Wallet Badge Logo kapag na-scan -->
+        <div id="decodedLogoContainer" class="decoded-logo-box">
+            <span style="font-size: 11px; color: #c084fc;">Opisyal na Badge/Logo ng Bangko:</span>
+            <img id="decodedLogoImg" width="32" height="32" style="border-radius: 4px; object-fit: contain; background: #000;" />
+        </div>
 
         <div class="preview-box">
             <div class="img-container">
@@ -53,12 +60,16 @@
             const elaCanvas = document.getElementById('elaCanvas');
             const resultBadge = document.getElementById('resultBadge');
             const logBox = document.getElementById('logBox');
+            const logoBox = document.getElementById('decodedLogoContainer');
+            const logoImg = document.getElementById('decodedLogoImg');
+
             if (!file) return;
 
             origPreview.src = URL.createObjectURL(file);
             origPreview.style.display = 'block';
             resultBadge.style.display = 'none';
-            logBox.innerText = "⏳ Sinusuri ang Smart Filename, Lihim na Steganography Payload, at ELA...";
+            logoBox.style.display = 'none';
+            logBox.innerText = "⏳ Sinusuri ang Smart Filename, Steganography Payload, at Dekodipikasyon ng Logo...";
             
             let scoreFake = 0;
             let logs = [];
@@ -73,15 +84,26 @@
                 logs.push("⚠️ Babala: Hindi sumunod sa opisyal na Smart Filename structure.");
             }
 
-            // 2. Extracted Steganography Payload Decoder Check
-            const decodedPayload = await extractSteganoPayload(file);
-            logs.push(`🔒 Decoded Payload Signature: "${decodedPayload.substring(0, 25)}..."`);
+            // 2. Extracted Steganography Payload & Logo Decoder
+            const decodedFullData = await extractSteganoPayload(file);
+            const parts = decodedFullData.split("||");
+            const decodedText = parts[0] || "";
+            const decodedLogo = parts[1] || "";
+
+            logs.push(`🔒 Decoded Payload: "${decodedText.substring(0, 30)}..."`);
             
-            if (decodedPayload.includes("BSP-SECURE-P2P") || decodedPayload.includes("TRUSTPAY")) {
+            if (decodedText.includes("BSP-SECURE-P2P") || decodedText.includes("TRUSTPAY")) {
                 logs.push("✅ Lihim na Mark Nahanap: Balido ang Scattered LSB Cryptographic Signature.");
+                
+                // Kung may nakitang na-embed na logo, i-render ito sa inspector screen!
+                if (decodedLogo.startsWith("data:image")) {
+                    logoImg.src = decodedLogo;
+                    logoBox.style.display = "flex";
+                    logs.push("✨ Matagumpay na na-decode at na-extract ang opisyal na Logo/Badge ng Bangko!");
+                }
             } else {
                 scoreFake += 60;
-                logs.push("🚨 Kritikal: Walang nahanap na Lihim na Mark o basag ang lagda (Posibleng peke/in-edit ng AI o Photoshop).");
+                logs.push("🚨 Kritikal: Walang nahanap na Lihim na Mark o basag ang lagda (Posibleng peke/in-edit).");
             }
 
             // 3. ELA Compression Analysis
@@ -124,8 +146,8 @@
                         let extractedChars = "";
                         let bitIndex = 0;
                         
-                        // Basahin ang na-embed na payload mula sa LSB ng Blue channel gamit ang parehong stride
-                        for (let i = 0; i < 30; i++) { // Basahin ang unang 30 characters
+                        // Basahin ang sapat na haba ng characters para makuha ang teksto at ang base64 ng logo
+                        for (let i = 0; i < 1500; i++) {
                             let charCode = 0;
                             for (let b = 0; b < 8; b++) {
                                 let pixelIndex = (bitIndex * 13 + 50) % (data.length / 4);
