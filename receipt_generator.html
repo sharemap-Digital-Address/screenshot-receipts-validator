@@ -6,7 +6,7 @@
     <title>P2P Secure Digital Receipt Generator (BSP Compliance Prototype)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -123,7 +123,6 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                // I-compress ang in-upload na logo papuntang 32x32 pixels para magkasya sa steganographic payload
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
@@ -133,7 +132,6 @@
                     ctx.drawImage(img, 0, 0, 32, 32);
                     customLogoBase64 = canvas.toDataURL('image/png');
 
-                    // Ipakita sa preview box
                     const previewCanvas = document.getElementById('logo-preview-canvas');
                     const pCtx = previewCanvas.getContext('2d');
                     pCtx.clearRect(0, 0, 24, 24);
@@ -183,8 +181,9 @@
                 const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const data = imgData.data;
 
-                // Buoin ang buong payload kasama ang Secret Text at ang Base64 string ng Logo
-                const secretText = document.getElementById('custom-secret-text').value + "||" + customLogoBase64;
+                // Pinagsama na may 'BSP-SECURE::' cryptographic header sa unahan
+                const userInputText = document.getElementById('custom-secret-text').value;
+                const secretText = "BSP-SECURE::" + userInputText + "||" + customLogoBase64;
 
                 let bitIndex = 0;
                 for (let i = 0; i < secretText.length; i++) {
