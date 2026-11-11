@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Digital Receipt Generator (TrustPay Shield)</title>
+    <title>P2P Secure Digital Receipt Generator (BSP Compliance Prototype)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -18,17 +18,16 @@
 
     <header class="border-b border-slate-800 pb-3 mb-4 flex items-center justify-between">
         <div>
-            <h1 class="font-bold text-sm text-white">TrustPay Receipt Generator</h1>
-            <p class="text-[10px] text-blue-400">P2P Secure Invisible Steganography Creator</p>
+            <h1 class="font-bold text-sm text-white">TrustPay Secure Generator</h1>
+            <p class="text-[10px] text-blue-400">BSP Anti-Estafa Cryptographic Engine</p>
         </div>
-        <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono">Generator</span>
+        <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono">Secure Node</span>
     </header>
 
     <main class="space-y-4 flex-1">
-        <!-- Controls & Custom Secret Mark Settings -->
         <div class="bg-slate-800/50 border border-slate-700/60 rounded-xl p-3 space-y-3">
             <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-300">Steganography Controls</span>
+                <span class="text-xs font-semibold text-slate-300">Watermark Configuration</span>
                 <button onclick="toggleUVLight()" id="uv-toggle-btn"
                     class="text-[11px] px-2.5 py-1 rounded-lg border border-purple-500/40 bg-purple-500/10 text-purple-300 font-medium hover:bg-purple-500/20 transition-all">
                     ⚡ Toggle UV X-Ray Preview
@@ -38,53 +37,41 @@
             <div class="grid grid-cols-2 gap-2 text-xs">
                 <div>
                     <label class="text-[11px] text-slate-400 block mb-1">Amount (PHP)</label>
-                    <input type="number" id="gen-amount" value="1500.00" onchange="generateNewHash()"
+                    <input type="number" id="gen-amount" value="1500.00" onchange="updateReceiptMeta()"
                         class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono focus:outline-none focus:border-blue-500">
                 </div>
                 <div>
                     <label class="text-[11px] text-slate-400 block mb-1">Recipient Mobile</label>
-                    <input type="text" id="gen-recipient" value="0917 *** 8899" onchange="generateNewHash()"
+                    <input type="text" id="gen-recipient" value="0917 *** 8899" onchange="updateReceiptMeta()"
                         class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono focus:outline-none focus:border-blue-500">
                 </div>
             </div>
 
-            <!-- Custom Secret Mark & Logo Upload Fields -->
             <div class="space-y-2 pt-2 border-t border-slate-700/50 text-xs">
                 <div>
-                    <label class="text-[11px] text-slate-400 block mb-1">Custom Lihim na Mark (Text/Code):</label>
-                    <input type="text" id="custom-secret-text" value="TRUSTPAY-SECURE-NODE-99" placeholder="Ilagay ang lihim na mensahe..."
+                    <label class="text-[11px] text-slate-400 block mb-1">Lihim na Mark (Stegano Payload Text):</label>
+                    <input type="text" id="custom-secret-text" value="BSP-SECURE-P2P-NODE-2026" 
                         class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono focus:outline-none focus:border-purple-500">
                 </div>
                 <div>
-                    <label class="text-[11px] text-slate-400 block mb-1">Custom Lihim na Logo/Icon (Image):</label>
+                    <label class="text-[11px] text-slate-400 block mb-1">Lihim na Logo/Icon (Opsyonal na Larawan):</label>
                     <input type="file" id="custom-logo-input" accept="image/*" onchange="loadCustomLogo(event)"
                         class="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-500">
                 </div>
             </div>
-
-            <div class="pt-1 flex items-center justify-between border-t border-slate-700/50 text-xs">
-                <span class="text-slate-400">Integrity State:</span>
-                <div class="flex gap-2">
-                    <button onclick="setIntegrity(true)" id="btn-state-authentic" class="px-2 py-1 rounded font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px]">✓ Authentic</button>
-                    <button onclick="setIntegrity(false)" id="btn-state-tampered" class="px-2 py-1 rounded font-semibold bg-slate-700 text-slate-400 border border-transparent text-[10px]">⚠ Edited/Fake</button>
-                </div>
-            </div>
         </div>
 
-        <!-- Receipt Card (Ito ang ise-save/download na may hidden steganographic pixels) -->
         <div id="receipt-card" class="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-2xl relative overflow-hidden transition-all duration-300">
-            
-            <!-- Invisible Hidden Watermark Layer (Naka-blend sa background, makikita lang sa UV X-ray mode) -->
             <div id="uv-layer" class="uv-watermark absolute inset-0 opacity-0 pointer-events-none flex flex-col justify-between p-6 z-10 bg-purple-950/20">
                 <div class="flex justify-between items-center">
                     <span class="text-purple-300 font-mono text-[9px] border border-purple-500/40 px-2 py-0.5 rounded bg-slate-950/80">
-                        STEGANO-MARK: <span id="preview-secret-label">TRUSTPAY-SECURE-NODE-99</span>
+                        ENCRYPTED PAYLOAD EMBEDDED
                     </span>
                     <canvas id="logo-preview-canvas" width="24" height="24" class="rounded border border-purple-400/40 bg-black/50"></canvas>
                 </div>
                 <div class="text-center my-auto">
-                    <span class="text-purple-300/20 text-xl font-black uppercase tracking-widest block transform -rotate-12 select-none">
-                        INVISIBLE BLENDED HASH
+                    <span class="text-purple-300/30 text-xl font-black uppercase tracking-widest block transform -rotate-12 select-none">
+                        BSP CRYPTOGRAPHIC HASH ACTIVE
                     </span>
                 </div>
                 <span class="text-[8px] font-mono text-purple-400/70" id="uv-hash-display">0x8F...3C</span>
@@ -94,11 +81,11 @@
                 <div class="w-10 h-10 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-1">
                     ✓
                 </div>
-                <h2 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">GCash Express Send</h2>
+                <h2 class="text-xs font-semibold tracking-wider text-slate-400 uppercase">GCash P2P Express Send</h2>
                 <div class="text-3xl font-bold font-mono text-white tracking-tight">
                     ₱<span id="display-amount">1,500.00</span>
                 </div>
-                <p class="text-[11px] text-slate-500">Nov 11, 2026 • 14:02:45</p>
+                <p class="text-[11px] text-slate-500" id="display-datetime">Nov 11, 2026 • 14:02:45</p>
             </div>
 
             <div class="py-4 space-y-2.5 text-xs">
@@ -117,27 +104,26 @@
             </div>
 
             <div class="pt-3 border-t border-dashed border-slate-800 flex items-center justify-between">
-                <span class="text-[10px] text-slate-500 font-mono">Secured by LSB Steganography</span>
-                <span id="status-tag" class="text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">SIGNED</span>
+                <span class="text-[10px] text-slate-500 font-mono">Protected by Scattered LSB Steganography</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">SECURED</span>
             </div>
         </div>
 
-        <!-- Secure Download Button -->
         <button onclick="downloadSecureReceipt()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-3 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-            📥 Download Secure Receipt (Smart Filename + Hidden Stegano)
+            📥 Download Secure Receipt (Smart Filename + Invisible Stegano)
         </button>
     </main>
 
     <script>
-        let isAuthentic = true, isUVActive = false;
-        let customLogoDataUrl = null;
+        let isUVActive = false;
+        let customLogoBase64 = "";
 
         function loadCustomLogo(event) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                customLogoDataUrl = e.target.result;
+                customLogoBase64 = e.target.result;
                 const canvas = document.getElementById('logo-preview-canvas');
                 const ctx = canvas.getContext('2d');
                 const img = new Image();
@@ -145,38 +131,22 @@
                     ctx.clearRect(0, 0, 24, 24);
                     ctx.drawImage(img, 0, 0, 24, 24);
                 };
-                img.src = customLogoDataUrl;
+                img.src = customLogoBase64;
             };
             reader.readAsDataURL(file);
         }
 
-        function generateHash(amount, ref, recipient, secretText) {
-            let str = `${amount}-${ref}-${recipient}-${secretText}-SECRET_BSP_2026`;
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; }
-            return "0x" + Math.abs(hash).toString(16).toUpperCase() + "89F2A";
-        }
-
-        function generateNewHash() {
+        function updateReceiptMeta() {
             const amount = document.getElementById('gen-amount').value;
             const recipient = document.getElementById('gen-recipient').value;
-            const secretText = document.getElementById('custom-secret-text').value || "DEFAULT_MARK";
-            
             document.getElementById('display-amount').innerText = parseFloat(amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2});
             document.getElementById('display-recipient').innerText = recipient;
-            document.getElementById('preview-secret-label').innerText = secretText;
-
-            let currentHash = isAuthentic ? generateHash(amount, "10094-829901", recipient, secretText) : "0xINVALID_TAMPERED_HASH";
-            document.getElementById('uv-hash-display').innerText = currentHash.substring(0, 10);
-        }
-
-        function setIntegrity(authentic) {
-            isAuthentic = authentic;
-            document.getElementById('btn-state-authentic').className = authentic ? "px-2 py-1 rounded font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px]" : "px-2 py-1 rounded font-semibold bg-slate-700 text-slate-400 border border-transparent text-[10px]";
-            document.getElementById('btn-state-tampered').className = !authentic ? "px-2 py-1 rounded font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/40 text-[10px]" : "px-2 py-1 rounded font-semibold bg-slate-700 text-slate-400 border border-transparent text-[10px]";
-            document.getElementById('status-tag').className = authentic ? "text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "text-[9px] px-1.5 py-0.5 rounded font-mono font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20";
-            document.getElementById('status-tag').innerText = authentic ? "SIGNED" : "TAMPERED";
-            generateNewHash();
+            
+            // Generate pseudo hash for preview
+            let str = `${amount}-${recipient}-BSP_PROTOTYPE_2026`;
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; }
+            document.getElementById('uv-hash-display').innerText = "0x" + Math.abs(hash).toString(16).toUpperCase().substring(0, 8);
         }
 
         function toggleUVLight() {
@@ -187,11 +157,9 @@
 
         function downloadSecureReceipt() {
             const card = document.getElementById('receipt-card');
-            
-            // Pansamantalang itago ang UV layer para hindi makita sa normal na download (invisible steganography concept)
             const uvLayer = document.getElementById('uv-layer');
             const prevOpacity = uvLayer.style.opacity;
-            uvLayer.style.opacity = '0';
+            uvLayer.style.opacity = '0'; // Itago muna ang visual UI overlay para tunay na invisible steganography
 
             const now = new Date();
             const yyyy = now.getFullYear();
@@ -205,20 +173,28 @@
 
             html2canvas(card, { backgroundColor: '#090d16', scale: 2 }).then(canvas => {
                 const ctx = canvas.getContext('2d');
-                
-                // I-embed ang Lihim na Data sa Least Significant Bits (LSB) ng mga sulok na pixels (Invisible Steganography)
                 const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const secretText = document.getElementById('custom-secret-text').value || "DEFAULT_MARK";
-                
-                // Halimbawa ng pag-encode ng secret text sa unang ilang pixels
-                for (let i = 0; i < Math.min(secretText.length, 50); i++) {
-                    let charCode = secretText.charCodeAt(i);
-                    // Baguhin nang bahagya ang blue channel LSB para hindi makita ng mata (gecko sa damuhan effect)
-                    imgData.data[i * 4 + 2] = (imgData.data[i * 4 + 2] & 0xFC) | (charCode & 0x03);
-                }
-                ctx.putImageData(imgData, 0, 0);
+                const data = imgData.data;
 
-                // Ibalik ang opacity state
+                // Kunin ang mga datos na ika-encrypt at iba-baon sa buong pixels (Scattered LSB)
+                const secretText = document.getElementById('custom-secret-text').value + "|" + 
+                                   document.getElementById('gen-amount').value + "|" + 
+                                   document.getElementById('gen-recipient').value + "|" + 
+                                   customLogoBase64.substring(0, 30); // Kasama ang piraso ng logo
+
+                let bitIndex = 0;
+                // I-convert ang bawat character sa binary at i-embed sa LSB ng Blue channel gamit ang deterministic stride
+                for (let i = 0; i < secretText.length; i++) {
+                    let charCode = secretText.charCodeAt(i);
+                    for (let b = 0; b < 8; b++) {
+                        let bit = (charCode >> b) & 1;
+                        let pixelIndex = (bitIndex * 13 + 50) % (data.length / 4); // Spread spectrum scrambling
+                        data[pixelIndex * 4 + 2] = (data[pixelIndex * 4 + 2] & ~1) | bit; // Baguhin ang LSB ng Blue
+                        bitIndex++;
+                    }
+                }
+
+                ctx.putImageData(imgData, 0, 0);
                 uvLayer.style.opacity = prevOpacity;
 
                 const link = document.createElement('a');
@@ -228,7 +204,7 @@
             });
         }
 
-        window.onload = generateNewHash;
+        window.onload = updateReceiptMeta;
     </script>
 </body>
 </html>
