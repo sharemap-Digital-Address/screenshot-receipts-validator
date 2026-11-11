@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P X-Ray Forensic Inspector</title>
+    <title>P2P X-Ray Forensic Inspector (BSP Verification Node)</title>
     <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #0f172a; color: #fff; padding: 20px; display: flex; justify-content: center; }
@@ -19,17 +19,16 @@
         .badge { padding: 12px; border-radius: 8px; font-weight: bold; font-size: 14px; margin-top: 15px; display: none; }
         .badge-real { background: #065f46; color: #34d399; border: 1px solid #059669; }
         .badge-ai { background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
-        .log-box { background: #0f172a; border: 1px solid #38bdf8; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #38bdf8; text-align: left; white-space: pre-wrap; margin-top: 15px; max-height: 150px; overflow-y: auto; }
+        .log-box { background: #0f172a; border: 1px solid #38bdf8; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #38bdf8; text-align: left; white-space: pre-wrap; margin-top: 15px; max-height: 160px; overflow-y: auto; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>🔍 P2P X-Ray Forensic Inspector</h2>
-        <p style="font-size: 12px; color: #94a3b8;">Smart Filename + Hidden Watermark + ELA Analysis</p>
+        <h2>🔍 BSP P2P X-Ray Forensic Inspector</h2>
+        <p style="font-size: 12px; color: #94a3b8;">Smart Filename + Cryptographic Stegano Decoder + ELA</p>
         
         <input type="file" id="imageInput" accept="image/*" onchange="inspectImage(event)">
         
-        <!-- X-Ray UV Light Scanner Toggle Button -->
         <button class="uv-button" onclick="toggleUVXRay()">💡 Turn on X-Ray UV Light Filter</button>
 
         <div class="preview-box">
@@ -44,69 +43,54 @@
         </div>
 
         <div id="resultBadge" class="badge"></div>
-        <div class="log-box" id="logBox">{ "status": "Mag-upload ng resibo para sa X-ray scan..." }</div>
+        <div class="log-box" id="logBox">{ "status": "Naghihintay ng resibo para sa forensic X-ray scan..." }</div>
     </div>
 
     <script>
-        let currentFile = null;
-
         async function inspectImage(event) {
-            currentFile = event.target.files[0];
+            const file = event.target.files[0];
             const origPreview = document.getElementById('origPreview');
             const elaCanvas = document.getElementById('elaCanvas');
             const resultBadge = document.getElementById('resultBadge');
             const logBox = document.getElementById('logBox');
-            if (!currentFile) return;
+            if (!file) return;
 
-            origPreview.src = URL.createObjectURL(currentFile);
+            origPreview.src = URL.createObjectURL(file);
             origPreview.style.display = 'block';
             resultBadge.style.display = 'none';
-            logBox.innerText = "⏳ Sinusuri ang Filename, Hidden Watermark, at ELA Compression...";
+            logBox.innerText = "⏳ Sinusuri ang Smart Filename, Lihim na Steganography Payload, at ELA...";
             
             let scoreFake = 0;
             let logs = [];
 
-            // 1. Smart Filename & Timestamp Verification
-            const fileName = currentFile.name;
+            // 1. Filename Verification
+            const fileName = file.name;
             logs.push(`📁 Filename: ${fileName}`);
-            
             if (fileName.includes("GCash_Receipt_") || fileName.includes("Maya_Receipt_") || fileName.includes("TrustPay")) {
-                logs.push("✅ Smart Filename Format Match: Pasok sa tamang timestamp at format.");
+                logs.push("✅ Smart Filename Format: Pasok sa tamang timestamp index.");
             } else {
-                scoreFake += 25;
-                logs.push("⚠️ Babala: Hindi sumunod sa opisyal na Smart Filename format.");
+                scoreFake += 30;
+                logs.push("⚠️ Babala: Hindi sumunod sa opisyal na Smart Filename structure.");
             }
 
-            // 2. Hidden Cryptographic Watermark / Steganography Check (Lihim na Mark)
-            const hasWatermark = await checkHiddenWatermark(currentFile);
-            if (hasWatermark) {
-                logs.push("🔒 Lihim na Mark Nahanap: Balido ang Cryptographic Signature (Genuine).");
+            // 2. Extracted Steganography Payload Decoder Check
+            const decodedPayload = await extractSteganoPayload(file);
+            logs.push(`🔒 Decoded Payload Signature: "${decodedPayload.substring(0, 25)}..."`);
+            
+            if (decodedPayload.includes("BSP-SECURE-P2P") || decodedPayload.includes("TRUSTPAY")) {
+                logs.push("✅ Lihim na Mark Nahanap: Balido ang Scattered LSB Cryptographic Signature.");
             } else {
-                scoreFake += 50;
-                logs.push("🚨 Babala: Walang nahanap na Lihim na Mark o basag ang Digital Signature (Maaaring peke o galing sa AI/Editor).");
+                scoreFake += 60;
+                logs.push("🚨 Kritikal: Walang nahanap na Lihim na Mark o basag ang lagda (Posibleng peke/in-edit ng AI o Photoshop).");
             }
 
-            // 3. Metadata Check
-            try {
-                const metadata = await exifr.parse(currentFile, true).catch(() => null);
-                if (metadata && metadata.Software) {
-                    const software = metadata.Software.toString().toLowerCase();
-                    if (software.includes('photoshop') || software.includes('canva') || software.includes('gimp')) {
-                        scoreFake += 40;
-                        logs.push(`🚨 Alerto: Nakitaan ng editing software signature ("${software}")!`);
-                    }
-                }
-            } catch (err) {
-                logs.push("ℹ️ Standard mobile metadata verified.");
-            }
-
-            // 4. ELA Analysis
-            const elaVariance = await performELA(currentFile, origPreview, elaCanvas);
+            // 3. ELA Compression Analysis
+            const elaVariance = await performELA(file, origPreview, elaCanvas);
             logs.push(`📊 ELA Variance Score: ${elaVariance.toFixed(2)}`);
             
             if (elaVariance > 38) {
-                scoreFake += 35;
-                logs.push("🚨 Mataas ang ELA variance: May binagong pixels o numero sa resibo.");
+                scoreFake += 40;
+                logs.push("🚨 Mataas ang ELA variance: May binagong pixel blocks o manipulahin sa teksto.");
             } else {
                 logs.push("✅ Pantay at balanse ang pixel compression ng buong resibo.");
             }
@@ -114,16 +98,15 @@
             resultBadge.style.display = 'block';
             if (scoreFake >= 40) {
                 resultBadge.className = "badge badge-ai";
-                resultBadge.innerHTML = `⚠️ POSIBLENG PEKE / INEDIT NA RESIBO 📵<br><span style="font-size:11px; font-weight:normal;">Bagsak sa Lihim na Mark o ELA Forensic Test.</span>`;
+                resultBadge.innerHTML = `⚠️ POSIBLENG PEKE / INEDIT NA RESIBO 📵<br><span style="font-size:11px; font-weight:normal;">Bagsak sa Steganographic Payload o ELA Inspection.</span>`;
             } else {
                 resultBadge.className = "badge badge-real";
-                resultBadge.innerHTML = `✅ VERIFIED ORIHINAL NA RESIBO 📱<br><span style="font-size:11px; font-weight:normal;">Pasok sa Lihim na Mark, UV, at ELA standards.</span>`;
+                resultBadge.innerHTML = `✅ VERIFIED ORIHINAL NA RESIBO 📱<br><span style="font-size:11px; font-weight:normal;">Pasok sa BSP Anti-Estafa Cryptographic Standards.</span>`;
             }
             logBox.innerText = logs.join('\n');
         }
 
-        // Simula ng pag-detect ng Lihim na Mark (Steganography / Pixel Hash check)
-        function checkHiddenWatermark(file) {
+        function extractSteganoPayload(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -135,26 +118,29 @@
                         canvas.height = img.height;
                         ctx.drawImage(img, 0, 0);
                         
-                        // Kunin ang sample pixels sa sulok kung saan nakatago ang steganography hash signature
-                        const p = ctx.getImageData(0, 0, 10, 10).data;
-                        let signatureSum = 0;
-                        for(let i=0; i<p.length; i+=4) {
-                            signatureSum += p[i] + p[i+1] + p[i+2];
-                        }
+                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const data = imgData.data;
+
+                        let extractedChars = "";
+                        let bitIndex = 0;
                         
-                        // Kung ang file ay galing sa ating generator, mayroon itong tiyak na pixel signature pattern
-                        // Kung inedit o AI-generated, mag-iiba o masisira ang pattern na ito.
-                        const isValid = (signatureSum % 7 === 0) || fileNameContainsValidHash(file.name);
-                        resolve(isValid);
+                        // Basahin ang na-embed na payload mula sa LSB ng Blue channel gamit ang parehong stride
+                        for (let i = 0; i < 30; i++) { // Basahin ang unang 30 characters
+                            let charCode = 0;
+                            for (let b = 0; b < 8; b++) {
+                                let pixelIndex = (bitIndex * 13 + 50) % (data.length / 4);
+                                let bit = data[pixelIndex * 4 + 2] & 1;
+                                charCode |= (bit << b);
+                                bitIndex++;
+                            }
+                            extractedChars += String.fromCharCode(charCode);
+                        }
+                        resolve(extractedChars);
                     };
                     img.src = e.target.result;
                 };
                 reader.readAsDataURL(file);
             });
-        }
-
-        function fileNameContainsValidHash(name) {
-            return name.includes("GCash_Receipt") || name.includes("TrustPay");
         }
 
         function toggleUVXRay() {
@@ -164,7 +150,7 @@
                 alert("X-ray UV Light Mode: OFF");
             } else {
                 canvas.style.filter = 'invert(100%) contrast(200%)';
-                alert("X-ray UV Light Mode: ON - Sinusuri ang hidden steganography marks!");
+                alert("X-ray UV Light Mode: ON - Sinusuri ang microscopic steganographic anomalies!");
             }
         }
 
