@@ -9,9 +9,12 @@
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #0f172a; color: #fff; padding: 20px; display: flex; justify-content: center; }
         .card { background: #1e293b; padding: 20px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: center; }
         h2 { color: #38bdf8; font-size: 18px; margin-top: 0; }
-        input[type="file"] { width: 100%; color: #fff; padding: 10px; background: #0f172a; border: 1px solid #475569; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px; }
+        .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; margin-bottom: 15px; }
+        .file-input-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+        .file-btn { background: #0f172a; color: #38bdf8; border: 1px dashed #38bdf8; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; display: block; box-sizing: border-box; text-align: center; transition: all 0.2s; }
+        .file-btn:hover { background: #1e293b; border-color: #60a5fa; }
         .preview-box { display: flex; gap: 10px; margin-bottom: 15px; }
-        .img-container { flex: 1; background: #0f172a; padding: 5px; border-radius: 6px; border: 1px solid #334155; }
+        .img-container { flex: 1; background: #0f172a; padding: 5px; border-radius: 6px; border: 1px solid #334155; position: relative; }
         .img-container img, .img-container canvas { width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px; display: block; }
         .label { font-size: 11px; color: #94a3b8; margin-bottom: 5px; display: block; font-weight: bold; }
         .uv-button { background: #7c3aed; color: #fff; border: none; padding: 10px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 10px; transition: background 0.2s; }
@@ -20,23 +23,20 @@
         .badge-real { background: #065f46; color: #34d399; border: 1px solid #059669; }
         .badge-ai { background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
         .log-box { background: #0f172a; border: 1px solid #38bdf8; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #38bdf8; text-align: left; white-space: pre-wrap; margin-top: 15px; max-height: 160px; overflow-y: auto; }
-        .decoded-logo-box { margin-top: 10px; padding: 8px; background: #090d16; border: 1px solid #7c3aed; border-radius: 6px; display: none; align-items: center; justify-content: center; gap: 10px; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>🔍 BSP P2P X-Ray Forensic Inspector</h2>
-        <p style="font-size: 12px; color: #94a3b8;">Smart Filename + Cryptographic Logo Decoder + ELA</p>
+        <p style="font-size: 12px; color: #94a3b8;">Smart Filename + Pattern Watermark Decoder + ELA</p>
         
-        <input type="file" id="imageInput" accept="image/*" onchange="inspectImage(event)">
+        <!-- Custom File Manager Picker Button para hindi dumiretso sa image viewer -->
+        <div class="file-input-wrapper">
+            <button class="file-btn" id="fileLabelBtn">📁 Pumili ng Resibo sa File Manager...</button>
+            <input type="file" id="imageInput" accept="image/png, image/jpeg" onchange="inspectImage(event)">
+        </div>
         
         <button class="uv-button" onclick="toggleUVXRay()">💡 Turn on X-Ray UV Light Filter</button>
-
-        <!-- Lalabas dito ang Decoded Official Bank/E-Wallet Badge Logo kapag na-scan -->
-        <div id="decodedLogoContainer" class="decoded-logo-box">
-            <span style="font-size: 11px; color: #c084fc;">Opisyal na Badge/Logo ng Bangko:</span>
-            <img id="decodedLogoImg" width="32" height="32" style="border-radius: 4px; object-fit: contain; background: #000;" />
-        </div>
 
         <div class="preview-box">
             <div class="img-container">
@@ -44,7 +44,7 @@
                 <img id="origPreview" style="display:none;">
             </div>
             <div class="img-container">
-                <span class="label">🔬 ELA X-Ray Map</span>
+                <span class="label">🔬 ELA X-Ray Map & Pattern</span>
                 <canvas id="elaCanvas" style="display:none;"></canvas>
             </div>
         </div>
@@ -54,28 +54,31 @@
     </div>
 
     <script>
+        let globalDecodedLogo = "";
+        let isUVOn = false;
+        let lastFile = null;
+
         async function inspectImage(event) {
-            const file = event.target.files[0];
+            lastFile = event.target.files[0];
             const origPreview = document.getElementById('origPreview');
             const elaCanvas = document.getElementById('elaCanvas');
             const resultBadge = document.getElementById('resultBadge');
             const logBox = document.getElementById('logBox');
-            const logoBox = document.getElementById('decodedLogoContainer');
-            const logoImg = document.getElementById('decodedLogoImg');
+            const fileBtn = document.getElementById('fileLabelBtn');
 
-            if (!file) return;
+            if (!lastFile) return;
 
-            origPreview.src = URL.createObjectURL(file);
+            fileBtn.innerText = `📄 ${lastFile.name}`;
+            origPreview.src = URL.createObjectURL(lastFile);
             origPreview.style.display = 'block';
             resultBadge.style.display = 'none';
-            logoBox.style.display = 'none';
-            logBox.innerText = "⏳ Sinusuri ang Smart Filename, Steganography Payload, at Dekodipikasyon ng Logo...";
+            logBox.innerText = "⏳ Sinusuri ang Smart Filename, Steganography Payload, at Pattern Logo...";
             
             let scoreFake = 0;
             let logs = [];
 
             // 1. Filename Verification
-            const fileName = file.name;
+            const fileName = lastFile.name;
             logs.push(`📁 Filename: ${fileName}`);
             if (fileName.includes("GCash_Receipt_") || fileName.includes("Maya_Receipt_") || fileName.includes("TrustPay")) {
                 logs.push("✅ Smart Filename Format: Pasok sa tamang timestamp index.");
@@ -85,29 +88,25 @@
             }
 
             // 2. Extracted Steganography Payload & Logo Decoder
-            const decodedFullData = await extractSteganoPayload(file);
+            const decodedFullData = await extractSteganoPayload(lastFile);
             const parts = decodedFullData.split("||");
             const decodedText = parts[0] || "";
-            const decodedLogo = parts[1] || "";
+            globalDecodedLogo = parts[1] || "";
 
             logs.push(`🔒 Decoded Payload: "${decodedText.substring(0, 30)}..."`);
             
             if (decodedText.includes("BSP-SECURE-P2P") || decodedText.includes("TRUSTPAY")) {
                 logs.push("✅ Lihim na Mark Nahanap: Balido ang Scattered LSB Cryptographic Signature.");
-                
-                // Kung may nakitang na-embed na logo, i-render ito sa inspector screen!
-                if (decodedLogo.startsWith("data:image")) {
-                    logoImg.src = decodedLogo;
-                    logoBox.style.display = "flex";
-                    logs.push("✨ Matagumpay na na-decode at na-extract ang opisyal na Logo/Badge ng Bangko!");
+                if (globalDecodedLogo.startsWith("data:image")) {
+                    logs.push("✨ Matagumpay na na-decode ang Opisyal na Logo/Badge ng Bangko!");
                 }
             } else {
                 scoreFake += 60;
-                logs.push("🚨 Kritikal: Walang nahanap na Lihim na Mark o basag ang lagda (Posibleng peke/in-edit).");
+                logs.push("🚨 Kritikal: Walang nahanap na Lihim na Mark o basag ang lagda (Posibleng peke).");
             }
 
             // 3. ELA Compression Analysis
-            const elaVariance = await performELA(file, origPreview, elaCanvas);
+            const elaVariance = await performELA(lastFile, origPreview, elaCanvas);
             logs.push(`📊 ELA Variance Score: ${elaVariance.toFixed(2)}`);
             
             if (elaVariance > 38) {
@@ -145,8 +144,6 @@
 
                         let extractedChars = "";
                         let bitIndex = 0;
-                        
-                        // Basahin ang sapat na haba ng characters para makuha ang teksto at ang base64 ng logo
                         for (let i = 0; i < 1500; i++) {
                             let charCode = 0;
                             for (let b = 0; b < 8; b++) {
@@ -166,14 +163,55 @@
         }
 
         function toggleUVXRay() {
+            isUVOn = !isUVOn;
             const canvas = document.getElementById('elaCanvas');
-            if (canvas.style.filter === 'invert(100%) contrast(200%)') {
-                canvas.style.filter = 'none';
-                alert("X-ray UV Light Mode: OFF");
-            } else {
-                canvas.style.filter = 'invert(100%) contrast(200%)';
-                alert("X-ray UV Light Mode: ON - Sinusuri ang microscopic steganographic anomalies!");
+            if (!lastFile) {
+                alert("Mangyaring mag-upload muna ng resibo.");
+                isUVOn = false;
+                return;
             }
+
+            if (isUVOn) {
+                alert("X-ray UV Light Mode: ON - Nag-aabang ang repeating watermark pattern sa loob ng resibo!");
+                applyPatternWatermark(lastFile, canvas);
+            } else {
+                alert("X-ray UV Light Mode: OFF");
+                performELA(lastFile, document.getElementById('origPreview'), canvas);
+            }
+        }
+
+        function applyPatternWatermark(file, canvas) {
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                canvas.style.display = 'block';
+                ctx.drawImage(img, 0, 0);
+
+                ctx.globalCompositeOperation = 'difference';
+                ctx.fillStyle = 'rgba(147, 51, 234, 0.25)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'source-over';
+
+                if (globalDecodedLogo.startsWith("data:image")) {
+                    const logoImg = new Image();
+                    logoImg.onload = () => {
+                        const stepX = Math.floor(canvas.width / 4);
+                        const stepY = Math.floor(canvas.height / 5);
+                        
+                        ctx.globalAlpha = 0.22;
+                        for (let x = 20; x < canvas.width; x += stepX) {
+                            for (let y = 30; y < canvas.height; y += stepY) {
+                                ctx.drawImage(logoImg, x, y, 40, 40);
+                            }
+                        }
+                        ctx.globalAlpha = 1.0;
+                    };
+                    logoImg.src = globalDecodedLogo;
+                }
+            };
+            img.src = URL.createObjectURL(file);
         }
 
         function performELA(file, imgEl, canvas) {
