@@ -29,7 +29,7 @@
 <body>
     <div class="card">
         <h2>🔍 BSP P2P X-Ray Forensic Inspector</h2>
-        <p style="font-size: 12px; color: #94a3b8;">Smart Filename + Cryptographic Header + Pattern Decoder + ELA</p>
+        <p style="font-size: 12px; color: #94a3b8;">Smart Filename + Fast Header Check + Pattern Decoder + ELA</p>
         
         <!-- Modern File System Access API Trigger Button -->
         <button class="file-btn" onclick="openFileManager()">📁 Buksan ang File Manager / Pumili ng Resibo</button>
@@ -100,7 +100,7 @@
             origPreview.src = URL.createObjectURL(lastFile);
             origPreview.style.display = 'block';
             resultBadge.style.display = 'none';
-            logBox.innerText = `⏳ Sinusuri ang file: ${lastFile.name} (Smart Filename, Cryptographic Header, at Logo)...`;
+            logBox.innerText = `⏳ Mabilis na sinusuri ang header ng file: ${lastFile.name}...`;
             
             let isFake = false;
             let logs = [];
@@ -115,23 +115,30 @@
                 logs.push("⚠️ Babala: Hindi sumunod sa opisyal na Smart Filename structure.");
             }
 
-            // 2. Gate 2 & 3: Extracted Steganography Payload & Cryptographic Header Check
-            const decodedFullData = await extractSteganoPayload(lastFile);
-            const parts = decodedFullData.split("||");
-            const decodedText = parts[0] || "";
-            globalDecodedLogo = parts[1] || "";
+            // 2. Mabilis na Pagsusuri ng Header (Unang 25 characters muna)
+            const headerCheck = await extractQuickHeader(lastFile);
+            logs.push(`🔒 Quick Header Check: "${headerCheck}"`);
 
-            logs.push(`🔒 Decoded Payload: "${decodedText.substring(0, 35)}..."`);
-            
-            // Mahigpit na pagsusuri gamit ang Cryptographic Header (BSP-SECURE::)
-            if (decodedText.startsWith("BSP-SECURE::") && globalDecodedLogo.startsWith("data:image")) {
-                isPayloadValid = true;
-                logs.push("✅ Opisyal na Cryptographic Header Nahanap: Balido ang lagda ng System Generator!");
-                logs.push("✨ Matagumpay na na-decode ang natatanging Logo/Badge!");
-            } else {
+            if (!headerCheck.startsWith("BSP-SECURE::")) {
                 isPayloadValid = false;
                 isFake = true;
-                logs.push("🚨 Kritikal: Walang nahanap na 'BSP-SECURE::' header o pekeng/ibang larawan ito (AI Generated / Random Image).");
+                logs.push("🚨 Kritikal: Walang nahanap na opisyal na 'BSP-SECURE::' header. Hindi ito resibo ng sistema.");
+            } else {
+                // Kung pumasa sa mabilis na header check, basahin na ang buong payload at ang logo
+                logs.push("✅ Nahanap ang Cryptographic Header! Binabasa ang buong payload at logo...");
+                const decodedFullData = await extractFullPayload(lastFile);
+                const parts = decodedFullData.split("||");
+                const decodedText = parts[0] || "";
+                globalDecodedLogo = parts[1] || "";
+
+                if (decodedText.startsWith("BSP-SECURE::") && globalDecodedLogo.startsWith("data:image")) {
+                    isPayloadValid = true;
+                    logs.push("✅ Balido ang buong LSB Cryptographic Signature at Logo Badge!");
+                } else {
+                    isPayloadValid = false;
+                    isFake = true;
+                    logs.push("🚨 Basag o hindi kumpleto ang Logo Badge ng resibo.");
+                }
             }
 
             // 3. ELA Compression Analysis
@@ -148,7 +155,7 @@
             resultBadge.style.display = 'block';
             if (isFake || !isPayloadValid) {
                 resultBadge.className = "badge badge-ai";
-                resultBadge.innerHTML = `⚠️ POSIBLENG PEKE / HINDI TUNAY NA RESIBO 📵<br><span style="font-size:11px; font-weight:normal;">Bagsak sa Cryptographic Header o Security Signature. Hindi ito likha ng ating Receipt Generator.</span>`;
+                resultBadge.innerHTML = `⚠️ POSIBLENG PEKE / HINDI TUNAY NA RESIBO 📵<br><span style="font-size:11px; font-weight:normal;">Bagsak sa Cryptographic Header o Security Signature.</span>`;
             } else {
                 resultBadge.className = "badge badge-real";
                 resultBadge.innerHTML = `✅ VERIFIED ORIHINAL NA RESIBO 📱<br><span style="font-size:11px; font-weight:normal;">Pasok sa BSP Anti-Estafa Cryptographic Standards.</span>`;
@@ -156,7 +163,8 @@
             logBox.innerText = logs.join('\n');
         }
 
-        function extractSteganoPayload(file) {
+        // Mabilis na pagbasa ng unang 25 characters para sa agarang hatol
+        function extractQuickHeader(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -166,7 +174,43 @@
                         const ctx = canvas.getContext('2d');
                         canvas.width = img.width;
                         canvas.height = img.height;
-                        canvas.drawImage(img, 0, 0);
+                        ctx.drawImage(img, 0, 0);
+                        
+                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const data = imgData.data;
+
+                        let extracted = "";
+                        let bitIndex = 0;
+                        for (let i = 0; i < 20; i++) { // Unang 20 characters lang muna
+                            let charCode = 0;
+                            for (let b = 0; b < 8; b++) {
+                                let pixelIndex = (bitIndex * 13 + 50) % (data.length / 4);
+                                let bit = data[pixelIndex * 4 + 2] & 1;
+                                charCode |= (bit << b);
+                                bitIndex++;
+                            }
+                            extracted += String.fromCharCode(charCode);
+                        }
+                        resolve(extracted);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Buong pagbasa ng payload kasama ang logo kapag totoo ang resibo
+        function extractFullPayload(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
                         
                         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                         const data = imgData.data;
@@ -201,7 +245,7 @@
             }
 
             if (!isPayloadValid) {
-                alert("⚠️ Hatol: PEKE / HINDI RESIBO! Walang balidong 'BSP-SECURE::' cryptographic header o logo badge na natagpuan sa larawang ito.");
+                alert("⚠️ Hatol: PEKE / HINDI RESIBO! Walang balidong 'BSP-SECURE::' cryptographic header o logo badge na natagpuan.");
                 isUVOn = false;
                 return;
             }
