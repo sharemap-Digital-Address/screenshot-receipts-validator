@@ -29,7 +29,7 @@
 <body>
     <div class="card">
         <h2>🔍 BSP P2P X-Ray Forensic Inspector</h2>
-        <p style="font-size: 12px; color: #94a3b8;">Smart Filename + Pattern Watermark Decoder + ELA</p>
+        <p style="font-size: 12px; color: #94a3b8;">Smart Filename + Cryptographic Header + Pattern Decoder + ELA</p>
         
         <!-- Modern File System Access API Trigger Button -->
         <button class="file-btn" onclick="openFileManager()">📁 Buksan ang File Manager / Pumili ng Resibo</button>
@@ -57,8 +57,8 @@
         let globalDecodedLogo = "";
         let isUVOn = false;
         let lastFile = null;
+        let isPayloadValid = false;
 
-        // Paggamit ng File System Access API para direktang buksan ang File Manager ng Device
         async function openFileManager() {
             if ('showOpenFilePicker' in window) {
                 try {
@@ -100,37 +100,38 @@
             origPreview.src = URL.createObjectURL(lastFile);
             origPreview.style.display = 'block';
             resultBadge.style.display = 'none';
-            logBox.innerText = `⏳ Sinusuri ang file: ${lastFile.name} (Smart Filename, Steganography, at Pattern Logo)...`;
+            logBox.innerText = `⏳ Sinusuri ang file: ${lastFile.name} (Smart Filename, Cryptographic Header, at Logo)...`;
             
-            let scoreFake = 0;
+            let isFake = false;
             let logs = [];
 
-            // 1. Filename Verification
+            // 1. Gate 1: Filename Verification
             const fileName = lastFile.name;
             logs.push(`📁 Filename: ${fileName}`);
             if (fileName.includes("GCash_Receipt_") || fileName.includes("Maya_Receipt_") || fileName.includes("TrustPay") || fileName.startsWith("Screenshot_")) {
                 logs.push("✅ Smart Filename Format: Pasok sa tamang estruktura.");
             } else {
-                scoreFake += 30;
+                isFake = true;
                 logs.push("⚠️ Babala: Hindi sumunod sa opisyal na Smart Filename structure.");
             }
 
-            // 2. Extracted Steganography Payload & Logo Decoder
+            // 2. Gate 2 & 3: Extracted Steganography Payload & Cryptographic Header Check
             const decodedFullData = await extractSteganoPayload(lastFile);
             const parts = decodedFullData.split("||");
             const decodedText = parts[0] || "";
             globalDecodedLogo = parts[1] || "";
 
-            logs.push(`🔒 Decoded Payload: "${decodedText.substring(0, 30)}..."`);
+            logs.push(`🔒 Decoded Payload: "${decodedText.substring(0, 35)}..."`);
             
-            if (decodedText.includes("BSP-SECURE-P2P") || decodedText.includes("TRUSTPAY") || decodedText.length > 5) {
-                logs.push("✅ Lihim na Mark Nahanap: Balido ang Scattered LSB Cryptographic Signature.");
-                if (globalDecodedLogo.startsWith("data:image")) {
-                    logs.push("✨ Matagumpay na na-decode ang Opisyal na Logo/Badge ng Bangko!");
-                }
+            // Mahigpit na pagsusuri gamit ang Cryptographic Header (BSP-SECURE::)
+            if (decodedText.startsWith("BSP-SECURE::") && globalDecodedLogo.startsWith("data:image")) {
+                isPayloadValid = true;
+                logs.push("✅ Opisyal na Cryptographic Header Nahanap: Balido ang lagda ng System Generator!");
+                logs.push("✨ Matagumpay na na-decode ang natatanging Logo/Badge!");
             } else {
-                scoreFake += 60;
-                logs.push("🚨 Kritikal: Walang nahanap na Lihim na Mark o basag ang lagda (Posibleng peke).");
+                isPayloadValid = false;
+                isFake = true;
+                logs.push("🚨 Kritikal: Walang nahanap na 'BSP-SECURE::' header o pekeng/ibang larawan ito (AI Generated / Random Image).");
             }
 
             // 3. ELA Compression Analysis
@@ -138,16 +139,16 @@
             logs.push(`📊 ELA Variance Score: ${elaVariance.toFixed(2)}`);
             
             if (elaVariance > 38) {
-                scoreFake += 40;
-                logs.push("🚨 Mataas ang ELA variance: May binagong pixel blocks o manipulahin sa teksto.");
+                isFake = true;
+                logs.push("🚨 Mataas ang ELA variance: May binagong pixel blocks.");
             } else {
                 logs.push("✅ Pantay at balanse ang pixel compression ng buong resibo.");
             }
 
             resultBadge.style.display = 'block';
-            if (scoreFake >= 40) {
+            if (isFake || !isPayloadValid) {
                 resultBadge.className = "badge badge-ai";
-                resultBadge.innerHTML = `⚠️ POSIBLENG PEKE / INEDIT NA RESIBO 📵<br><span style="font-size:11px; font-weight:normal;">Bagsak sa Steganographic Payload o ELA Inspection.</span>`;
+                resultBadge.innerHTML = `⚠️ POSIBLENG PEKE / HINDI TUNAY NA RESIBO 📵<br><span style="font-size:11px; font-weight:normal;">Bagsak sa Cryptographic Header o Security Signature. Hindi ito likha ng ating Receipt Generator.</span>`;
             } else {
                 resultBadge.className = "badge badge-real";
                 resultBadge.innerHTML = `✅ VERIFIED ORIHINAL NA RESIBO 📱<br><span style="font-size:11px; font-weight:normal;">Pasok sa BSP Anti-Estafa Cryptographic Standards.</span>`;
@@ -165,7 +166,7 @@
                         const ctx = canvas.getContext('2d');
                         canvas.width = img.width;
                         canvas.height = img.height;
-                        ctx.drawImage(img, 0, 0);
+                        canvas.drawImage(img, 0, 0);
                         
                         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                         const data = imgData.data;
@@ -199,8 +200,14 @@
                 return;
             }
 
+            if (!isPayloadValid) {
+                alert("⚠️ Hatol: PEKE / HINDI RESIBO! Walang balidong 'BSP-SECURE::' cryptographic header o logo badge na natagpuan sa larawang ito.");
+                isUVOn = false;
+                return;
+            }
+
             if (isUVOn) {
-                alert("X-ray UV Light Mode: ON - Nag-aabang ang repeating watermark pattern sa loob ng resibo!");
+                alert("X-ray UV Light Mode: ON - Lumilitaw ang repeating watermark pattern sa loob ng resibo!");
                 applyPatternWatermark(lastFile, canvas);
             } else {
                 alert("X-ray UV Light Mode: OFF");
@@ -231,7 +238,6 @@
                         ctx.globalAlpha = 0.22;
                         for (let x = 20; x < canvas.width; x += stepX) {
                             for (let y = 30; y < canvas.height; y += stepY) {
-                                // Kalkulahin ang aspect ratio para hindi ma-crop ang badge
                                 const hRatio = 40 / logoImg.width;
                                 const vRatio = 40 / logoImg.height;
                                 const ratio = Math.min(hRatio, vRatio);
