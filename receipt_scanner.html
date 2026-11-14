@@ -14,6 +14,9 @@
         .file-btn { width: 100%; color: #fff; padding: 14px; background: #0284c7; border: none; border-radius: 6px; box-sizing: border-box; margin-bottom: 15px; font-weight: bold; cursor: pointer; font-size: 14px; transition: background 0.2s; }
         .file-btn:hover { background: #0284c7; }
 
+        /* Estilo para sa Status Box ng Floating Service Bridge */
+        .status-box { background: #334155; color: #38bdf8; padding: 10px; border-radius: 6px; font-size: 12px; font-weight: bold; margin-bottom: 15px; word-break: break-all; border: 1px solid #475569; }
+
         .preview-box { display: flex; gap: 10px; margin-bottom: 15px; }
         .img-container { flex: 1; background: #0f172a; padding: 5px; border-radius: 6px; border: 1px solid #334155; position: relative; }
         .img-container img, .img-container canvas { width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px; display: block; }
@@ -31,6 +34,9 @@
         <h2>🔍 BSP P2P X-Ray Forensic Inspector</h2>
         <p style="font-size: 12px; color: #94a3b8;">Smart Filename + Pattern Watermark Decoder + ELA</p>
         
+        <!-- 📌 STATUS BOX: Dito natin makikita kung pumasok ang file mula sa Service -->
+        <div id="receivedFileName" class="status-box">📂 Status: Naghihintay ng data mula sa service...</div>
+
         <!-- START: UI MANUAL CONTROLS -->
         <button class="file-btn" onclick="openFileManager()">📁 Buksan ang File Manager / Pumili ng Resibo</button>
         <input type="file" id="hiddenFileInput" accept="image/*" style="display:none;" onchange="inspectImageFromFile(event)">
@@ -60,16 +66,29 @@
         let currentFileName = "auto_receipt.jpg";
 
         /* START: ANDROID BRIDGE AUTOMATIC RECEIVER */
-        // Ito ang sasaluhin ang Base64 data string na galing mismo sa Java code ng Sketchware App
         function scanReceiptFromBase64(base64Data, fileName) {
             if (fileName) currentFileName = fileName;
             
-            // I-convert ang base64 patungong File / Blob para magamit sa umiiral na processing pipeline
+            // I-update ang status box sa taas para makita natin ang pangalan ng natanggap na file
+            const statusBox = document.getElementById('receivedFileName');
+            if (statusBox) {
+                statusBox.innerText = "📥 Natanggap: " + currentFileName;
+                statusBox.style.background = "#065f46"; // Magiging kulay berde kapag pumasok
+                statusBox.style.borderColor = "#059669";
+            }
+            
+            // I-convert ang base64 patungong File / Blob para sa forensic processing pipeline
             fetch(base64Data)
                 .then(res => res.blob())
                 .then(blob => {
                     const file = new File([blob], currentFileName, { type: "image/jpeg" });
                     processReceiptFile(file);
+                })
+                .catch(err => {
+                    if (statusBox) {
+                        statusBox.innerText = "❌ Error sa Base64 blob: " + err.message;
+                        statusBox.style.background = "#7f1d1d";
+                    }
                 });
         }
         /* END: ANDROID BRIDGE AUTOMATIC RECEIVER */
