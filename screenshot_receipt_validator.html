@@ -244,12 +244,11 @@
     // GATE 1: SMART FILENAME VALIDATION ENGINE
     // ==========================================
     function validateGate1(fileName) {
-        // 1. Suporta para sa Bagong Pormat: bankname_receipt_DDMMYY_HHMMSS
         const newReceiptMatch = fileName.match(/^([A-Za-z0-9]+)_receipt_(\d{2})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.(jpg|png|jpeg)$/i);
         if (newReceiptMatch) {
             const bankName = newReceiptMatch[1];
             const da = newReceiptMatch[2], mo = newReceiptMatch[3], yrShort = newReceiptMatch[4];
-            const yr = "20" + yrShort; // Assume 20xx
+            const yr = "20" + yrShort;
             const hr = parseInt(newReceiptMatch[5], 10), min = parseInt(newReceiptMatch[6], 10);
             return {
                 valid: true,
@@ -259,7 +258,6 @@
             };
         }
 
-        // 2. Suporta para sa Lumang Pormat: bankname_downloaded_receipt_YYYYMMDD_HHmmss
         const oldEwalletMatch = fileName.match(/^([A-Za-z0-9]+)_downloaded_receipt_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.(jpg|png|jpeg)$/i);
         if (oldEwalletMatch) {
             const bankName = oldEwalletMatch[1];
@@ -497,14 +495,14 @@
 
             receiptTimeView.innerText = detectedDateStr + " | " + detected_time;
 
-            // 🛡️ MAHIGPIT NA PAGKUHA NG REFERENCE NUMBER (Inayos para iwas "Date 18")
+            // 🛡️ MAHIGPIT NA PAGKUHA NG REFERENCE NUMBER (Inalis ang paghahanap sa Trace ID)
             let foundReferenceNumber = "";
             for (let i = 0; i < rawLines.length; i++) {
                 const currentLine = rawLines[i];
-                const hasKeyword = /Reference\s*(?:No\.?|Number|ID)|Ref\.?\s*No\.?|Payment\s*ID|Invoice\s*number|Trace\s*ID/i.test(currentLine);
+                const hasKeyword = /Reference\s*(?:No\.?|Number|ID)|Ref\.?\s*No\.?|Payment\s*ID|Invoice\s*number/i.test(currentLine);
                 if (hasKeyword) {
                     let candidate = "";
-                    const matchInSameLine = currentLine.match(/(?:Reference\s*(?:No\.?|Number|ID)|Ref\.?\s*No\.?|Payment\s*ID|Invoice\s*number|Trace\s*ID)\s*[:\s]*([A-Z0-9\-\s]{6,30})/i);
+                    const matchInSameLine = currentLine.match(/(?:Reference\s*(?:No\.?|Number|ID)|Ref\.?\s*No\.?|Payment\s*ID|Invoice\s*number)\s*[:\s]*([A-Z0-9\-\s]{6,30})/i);
                     if (matchInSameLine && matchInSameLine[1]) {
                         candidate = matchInSameLine[1].trim();
                     } else if (i + 1 < rawLines.length) {
