@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anti-Fake Receipt Inspector (Triple & Dual-Gate)</title>
+    <title>Triple-Gate Anti-Fake Receipt Inspector</title>
     <!-- Tesseract.js CDN para sa Browser OCR -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <style>
@@ -42,7 +42,7 @@
 <body>
 
 <div class="card">
-    <h2>Anti-Fake Inspector (Screenshot & Direct Share)</h2>
+    <h2>Triple-Gate Anti-Fake Inspector</h2>
     
     <input type="text" id="receivedFileName" class="debug-input" value="📥 Naghihintay ng file mula sa Android Storage..." readonly>
 
@@ -87,7 +87,7 @@
     <div id="comparisonResult" class="comparison-box"></div>
 
     <div class="form-group" style="margin-top: 15px;">
-        <label>📦 Pinagsamang JSON Data (Validation Output):</label>
+        <label>📦 Pinagsamang JSON Data (Triple-Gate Output):</label>
         <div id="jsonView" class="view-box json-box">-- Walang data --</div>
     </div>
 </div>
@@ -241,9 +241,30 @@
     }
 
     // ==========================================
-    // GATE 1: SMART FILENAME VALIDATION ENGINE
+    // ADVANCED MULTI-PATTERN GATE 1 ENGINE
     // ==========================================
     function validateGate1(fileName) {
+        const fileLower = fileName.toLowerCase();
+
+        // 1. BLACKLIST / HARANG AGAD: Canva, Adobe, ChatGPT, Untitled, atbp.
+        if (
+            fileLower.includes("canva") || 
+            fileLower.includes("adobe") || 
+            fileLower.includes("chatgpt image") || 
+            fileLower.includes("psx_") || 
+            fileLower.startsWith("untitled") || 
+            fileLower.startsWith("artwork") ||
+            fileLower.includes("my design")
+        ) {
+            return {
+                valid: false,
+                isDirectShare: false,
+                category: "Fake/Design Tool",
+                message: "Resibong gawa sa Canva, Adobe, ChatGPT, o editing software. Hindi ito tunay na screenshot."
+            };
+        }
+
+        // 2. Bagong Pormat: bankname_receipt_DDMMYY_HHMMSS (Direct E-Wallet Share - Walang Crop)
         const newReceiptMatch = fileName.match(/^([A-Za-z0-9]+)_receipt_(\d{2})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.(jpg|png|jpeg)$/i);
         if (newReceiptMatch) {
             const bankName = newReceiptMatch[1];
@@ -258,6 +279,7 @@
             };
         }
 
+        // 3. Lumang Pormat: bankname_downloaded_receipt_YYYYMMDD_HHmmss (Direct E-Wallet Share - Walang Crop)
         const oldEwalletMatch = fileName.match(/^([A-Za-z0-9]+)_downloaded_receipt_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.(jpg|png|jpeg)$/i);
         if (oldEwalletMatch) {
             const bankName = oldEwalletMatch[1];
@@ -271,24 +293,7 @@
             };
         }
 
-        const fileLower = fileName.toLowerCase();
-        if (
-            fileLower.includes("canva") || 
-            fileLower.includes("adobe") || 
-            fileLower.includes("chatgpt image") || 
-            fileLower.includes("psx_") || 
-            fileLower.startsWith("untitled") || 
-            fileLower.startsWith("artwork") ||
-            fileLower.includes("my design")
-        ) {
-            return {
-                valid: false,
-                isDirectShare: false,
-                category: "Fake/Design Tool",
-                message: "Resibong gawa sa Canva, Adobe, ChatGPT, o editing software. Hindi ito tunay na dokumento."
-            };
-        }
-
+        // 4. Apple iPhone Format: IMG_1234.PNG
         const iphonePattern = /^IMG_\d{4}\.(png|jpg|jpeg)$/i;
         if (iphonePattern.test(fileName)) {
             return {
@@ -299,6 +304,7 @@
             };
         }
 
+        // 5. Xiaomi / Redmi / POCO Format: Screenshot_2026-11-07-12-06-07-123.jpg
         const xiaomiMatch = fileName.match(/^Screenshot_(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})(-\d+)?\.(jpg|png|jpeg)$/i);
         if (xiaomiMatch) {
             const yr = xiaomiMatch[1], mo = xiaomiMatch[2], da = xiaomiMatch[3];
@@ -311,6 +317,7 @@
             };
         }
 
+        // 6. Google Pixel / Motorola / Nothing Format: Screenshot_20261107-120607.png
         const pixelMatch = fileName.match(/^Screenshot_(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})\.(jpg|png|jpeg)$/i);
         if (pixelMatch) {
             const yr = pixelMatch[1], mo = pixelMatch[2], da = pixelMatch[3];
@@ -323,6 +330,7 @@
             };
         }
 
+        // 7. Standard Android: Screenshot_20261107_120607.jpg
         const standardMatch = fileName.match(/^Screenshot_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})(_\d+)?\.(jpg|png|jpeg)$/i);
         if (standardMatch) {
             const yr = standardMatch[1], mo = standardMatch[2], da = standardMatch[3];
@@ -331,6 +339,19 @@
                 valid: true,
                 isDirectShare: false,
                 category: "Standard Android",
+                year: yr, month: mo, day: da, minutes: (hr * 60) + min, dateStr: `${yr}${mo}${da}`
+            };
+        }
+
+        // 8. Windows PC Snipping Tool Format: Screenshot 2026-11-07 120607.png
+        const windowsMatch = fileName.match(/^Screenshot (\d{4})-(\d{2})-(\d{2}) (\d{2})(\d{2})(\d{2})\.(png|jpg|jpeg)$/i);
+        if (windowsMatch) {
+            const yr = windowsMatch[1], mo = windowsMatch[2], da = windowsMatch[3];
+            const hr = parseInt(windowsMatch[4], 10), min = parseInt(windowsMatch[5], 10);
+            return {
+                valid: true,
+                isDirectShare: false,
+                category: "Windows PC",
                 year: yr, month: mo, day: da, minutes: (hr * 60) + min, dateStr: `${yr}${mo}${da}`
             };
         }
@@ -369,6 +390,9 @@
         const fileName = file.name.trim();
         fileNameView.innerText = fileName;
 
+        // ==========================================
+        // GATE 1: MULTI-PATTERN VALIDATION
+        // ==========================================
         const gate1Result = validateGate1(fileName);
 
         if (!gate1Result.valid) {
@@ -442,12 +466,13 @@
                 }
             });
 
-            statusMsg.innerText = "✅ Matagumpay na nasuri ang resibo!";
+            statusMsg.innerText = "✅ Matagumpay na nasuri ang mga bahagi ng resibo!";
 
             const rawLines = receiptOcr.data.text.split('\n')
                                        .map(l => l.trim())
                                        .filter(l => l.length > 0);
 
+            // Suporta sa GoTyme format ("18 Nov 2026 at 12:36 PM") at iba pang pormat
             const dateRegex = /\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}\b|(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*\d{1,2},?\s*\d{4}|\d{2}[-/]\d{2}[-/]\d{4}/i;
             const timeRegex = /\b\d{1,2}:\d{2}(?:\:\d{2})?\s?(?:AM|PM|am|pm)?\b/i;
 
@@ -495,7 +520,7 @@
 
             receiptTimeView.innerText = detectedDateStr + " | " + detected_time;
 
-            // 🔢 MATALINONG PAGKUHA NG REFERENCE NUMBER (Galing sa subok na code, eksklusibo para sa Reference No.)
+            // 🔢 TANGING REFERENCE NO. LAMANG (Mahigpit na patakaran, iwas "Date 18")
             let foundReferenceNumber = "";
             for (let i = 0; i < rawLines.length; i++) {
                 const currentLine = rawLines[i];
@@ -509,11 +534,11 @@
                         candidate = rawLines[i + 1].trim();
                     }
                     if (candidate) {
-                        candidate = candidate.split(/(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|\b20\d{2}\b)/i)[0].trim();
-                        let cleanMatch = candidate.match(/^[A-Z0-9\-\s]{6,25}/i);
+                        candidate = candidate.split(/(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Date|\b20\d{2}\b)/i)[0].trim();
+                        let cleanMatch = candidate.match(/^[A-Z0-9\-]{6,25}/i);
                         if (cleanMatch) {
                             let refined = cleanMatch[0].trim().replace(/\s+0$/, '');
-                            if (refined.length >= 6 && !refined.toLowerCase().includes('proof')) {
+                            if (refined.length >= 6 && !/date|time|proof|paid/i.test(refined)) {
                                 foundReferenceNumber = refined;
                                 break;
                             }
@@ -530,6 +555,9 @@
                 refNumView.innerText = "⚠️ Hindi natagpuan ang Reference No.";
             }
 
+            // ==========================================
+            // GATE 2: FILENAME DATE/TIME VS. RECEIPT DATE/TIME
+            // ==========================================
             const receiptMinutes = timeToMinutes(detected_time);
             let gate2Passed = true;
             let gate2Diff = null;
@@ -555,8 +583,13 @@
                         gate2Passed = false;
                     }
                 }
+            } else {
+                gate2Passed = true; 
             }
 
+            // ==========================================
+            // GATE 3: DUAL OCR STATUS BAR VS. RECEIPT TIME (Bypassed pag Direct Share)
+            // ==========================================
             let gate3Passed = true;
             let gate3StatusText = "N/A (Direct Share - No Status Bar)";
 
@@ -572,6 +605,7 @@
                 gate3StatusText = gate3Passed ? "Passed ✅" : "Failed ❌";
             }
 
+            // Pinal na Desisyon mula sa Triple-Gate / Dual-Gate
             comparisonResult.style.display = 'block';
             let verificationStatus = "";
 
@@ -587,6 +621,7 @@
                 comparisonResult.innerHTML = `Fake 📵 Not Match<br><span style="font-size:11px; font-weight:normal;">Bigo sa Date/Time o Status Bar validation.</span>`;
             }
 
+            // Pinagsamang JSON Output
             const finalResultJson = {
                 success: true,
                 verification_status: verificationStatus,
@@ -616,7 +651,7 @@
 
         } catch (err) {
             console.error(err);
-            statusMsg.innerText = "❌ May naganap na error sa pagproseso ng Inspector system.";
+            statusMsg.innerText = "❌ May naganap na error sa pagproseso ng system.";
         }
     }
 </script>
