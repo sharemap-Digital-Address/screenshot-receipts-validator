@@ -235,6 +235,21 @@
     // ADVANCED MULTI-PATTERN GATE 1 ENGINE
     // ==========================================
     function validateGate1(fileName) {
+                // 🛡️ Suporta para sa E-Wallet Downloaded Receipts Pattern
+        const ewalletReceiptMatch = fileName.match(/^([A-Za-z0-9]+)_downloaded_receipt_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.(jpg|png|jpeg)$/i);
+        if (ewalletReceiptMatch) {
+            const bankName = ewalletReceiptMatch[1];
+            const yr = ewalletReceiptMatch[2], mo = ewalletReceiptMatch[3], da = ewalletReceiptMatch[4];
+            const hr = parseInt(ewalletReceiptMatch[5], 10), min = parseInt(ewalletReceiptMatch[6], 10);
+            return {
+                valid: true,
+                category: bankName + " App Receipt",
+                year: yr, month: mo, day: da, minutes: (hr * 60) + min, dateStr: `${yr}${mo}${da}`
+            };
+        }
+
+
+        
         const fileLower = fileName.toLowerCase();
 
         if (
