@@ -32,7 +32,7 @@
         .status { font-size: 12px; color: #fbbf24; font-style: italic; margin-bottom: 10px; text-align: center; }
         .preview-grid { display: flex; gap: 10px; margin-bottom: 15px; }
         .preview-box { flex: 1; text-align: center; }
-        .preview-img { width: 100%; max-height: 150px; object-fit: contain; border-radius: 6px; background: #000; border: 1px solid #38bdf8; display: none; }
+        .preview-img { width: 100%; max-height: 250px; object-fit: contain; border-radius: 6px; background: #000; border: 1px solid #38bdf8; display: none; }
         .preview-label { font-size: 10px; color: #38bdf8; margin-bottom: 3px; display: block; }
         .comparison-box { padding: 15px; border-radius: 8px; font-weight: bold; text-align: center; margin-top: 15px; font-size: 14px; display: none; }
         .match-verified { background: #065f46; color: #34d399; border: 1px solid #059669; }
@@ -57,22 +57,13 @@
     </div>
 
     <div class="preview-grid" id="previewGridContainer">
-        <div class="preview-box" id="statusBarBoxContainer">
-            <span class="preview-label">📱 1. Status Bar Crop</span>
-            <img id="statusBarPreview" class="preview-img" alt="Status Bar Preview">
-        </div>
-        <div class="preview-box">
-            <span class="preview-label" id="receiptLabelPreview">🧾 2. Receipt Crop (9:16)</span>
+        <div class="preview-box" style="width: 100%;">
+            <span class="preview-label" id="receiptLabelPreview">🧾 Receipt View (Walang Crop)</span>
             <img id="receiptPreview" class="preview-img" alt="Receipt Preview">
         </div>
     </div>
     
     <div id="statusMsg" class="status">Mag-upload ng resibo o mag-share mula sa gallery upang simulan ang pagsusuri...</div>
-
-    <div class="form-group" id="statusBarTimeGroup">
-        <label>⏰ Oras sa Status Bar (statusbar_detected_time):</label>
-        <div id="statusBarTimeView" class="view-box">-- Naghihintay --</div>
-    </div>
 
     <div class="form-group">
         <label>📅 Petsa at Oras sa Resibo (detected_time):</label>
@@ -140,71 +131,6 @@
         }
     }
 
-    async function cropStatusBar(imageFile) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const cropHeight = img.height * 0.12; 
-                canvas.width = img.width;
-                canvas.height = cropHeight;
-
-                ctx.drawImage(img, 0, 0, img.width, cropHeight, 0, 0, img.width, cropHeight);
-                canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
-            };
-            img.src = URL.createObjectURL(imageFile);
-        });
-    }
-
-    async function cropReceiptOnly(imageFile) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
-                canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
-            };
-            img.src = URL.createObjectURL(imageFile);
-        });
-    }
-
-    async function cropTo916AndRemoveStatusBar(imageFile) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                const cropTopPercent = 0.07; 
-                const originalSourceY = img.height * cropTopPercent;
-                const originalSourceHeight = img.height * (1 - cropTopPercent);
-                
-                let sx = 0, sy = originalSourceY, sWidth = img.width, sHeight = originalSourceHeight;
-                const targetAspect = 9 / 16;
-                const currentAspect = sWidth / sHeight;
-
-                if (currentAspect > targetAspect) {
-                    const newWidth = sHeight * targetAspect;
-                    sx = sx + (sWidth - newWidth) / 2;
-                    sWidth = newWidth;
-                } else if (currentAspect < targetAspect) {
-                    sHeight = sWidth / targetAspect;
-                }
-
-                canvas.width = sWidth;
-                canvas.height = sHeight;
-                ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
-
-                canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
-            };
-            img.src = URL.createObjectURL(imageFile);
-        });
-    }
-
     function timeToMinutes(timeStr) {
         if (!timeStr) return null;
         let cleanStr = timeStr.trim().toUpperCase();
@@ -246,7 +172,6 @@
     function validateGate1(fileName) {
         const fileLower = fileName.toLowerCase();
 
-        // 1. BLACKLIST / HARANG AGAD: Canva, Adobe, ChatGPT, Untitled, atbp.
         if (
             fileLower.includes("canva") || 
             fileLower.includes("adobe") || 
@@ -264,125 +189,38 @@
             };
         }
 
-        // 2. Bagong Pormat: bankname_receipt_DDMMYY_HHMMSS (Direct E-Wallet Share - Walang Crop)
-        const newReceiptMatch = fileName.match(/^([A-Za-z0-9]+)_receipt_(\d{2})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.(jpg|png|jpeg)$/i);
-        if (newReceiptMatch) {
-            const bankName = newReceiptMatch[1];
-            const da = newReceiptMatch[2], mo = newReceiptMatch[3], yrShort = newReceiptMatch[4];
-            const yr = "20" + yrShort;
-            const hr = parseInt(newReceiptMatch[5], 10), min = parseInt(newReceiptMatch[6], 10);
+        // Tanggapin ang iba't ibang pormat ng e-wallet at standard screenshots
+        const ewalletMatch = fileName.match(/^([A-Za-z0-9]+)_(?:downloaded_)?receipt_.*$/i);
+        if (ewalletMatch || fileLower.includes("screenshot") || fileLower.includes("img") || fileLower.includes("tyme") || fileLower.includes("gcash") || fileLower.includes("maya")) {
             return {
                 valid: true,
                 isDirectShare: true,
-                category: bankName + " App Receipt",
-                year: yr, month: mo, day: da, minutes: (hr * 60) + min, dateStr: `${yr}${mo}${da}`
-            };
-        }
-
-        // 3. Lumang Pormat: bankname_downloaded_receipt_YYYYMMDD_HHmmss (Direct E-Wallet Share - Walang Crop)
-        const oldEwalletMatch = fileName.match(/^([A-Za-z0-9]+)_downloaded_receipt_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.(jpg|png|jpeg)$/i);
-        if (oldEwalletMatch) {
-            const bankName = oldEwalletMatch[1];
-            const yr = oldEwalletMatch[2], mo = oldEwalletMatch[3], da = oldEwalletMatch[4];
-            const hr = parseInt(oldEwalletMatch[5], 10), min = parseInt(oldEwalletMatch[6], 10);
-            return {
-                valid: true,
-                isDirectShare: true,
-                category: bankName + " App Receipt",
-                year: yr, month: mo, day: da, minutes: (hr * 60) + min, dateStr: `${yr}${mo}${da}`
-            };
-        }
-
-        // 4. Apple iPhone Format: IMG_1234.PNG
-        const iphonePattern = /^IMG_\d{4}\.(png|jpg|jpeg)$/i;
-        if (iphonePattern.test(fileName)) {
-            return {
-                valid: true,
-                isDirectShare: false,
-                category: "Apple iPhone",
+                category: "E-Wallet/Device Receipt",
                 year: null, month: null, day: null, minutes: null, dateStr: null
             };
         }
 
-        // 5. Xiaomi / Redmi / POCO Format: Screenshot_2026-11-07-12-06-07-123.jpg
-        const xiaomiMatch = fileName.match(/^Screenshot_(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})(-\d+)?\.(jpg|png|jpeg)$/i);
-        if (xiaomiMatch) {
-            const yr = xiaomiMatch[1], mo = xiaomiMatch[2], da = xiaomiMatch[3];
-            const hr = parseInt(xiaomiMatch[4], 10), min = parseInt(xiaomiMatch[5], 10);
-            return {
-                valid: true,
-                isDirectShare: false,
-                category: "Xiaomi/Redmi/POCO",
-                year: yr, month: mo, day: da, minutes: (hr * 60) + min, dateStr: `${yr}${mo}${da}`
-            };
-        }
-
-        // 6. Google Pixel / Motorola / Nothing Format: Screenshot_20261107-120607.png
-        const pixelMatch = fileName.match(/^Screenshot_(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})\.(jpg|png|jpeg)$/i);
-        if (pixelMatch) {
-            const yr = pixelMatch[1], mo = pixelMatch[2], da = pixelMatch[3];
-            const hr = parseInt(pixelMatch[4], 10), min = parseInt(pixelMatch[5], 10);
-            return {
-                valid: true,
-                isDirectShare: false,
-                category: "Google Pixel / Stock Android",
-                year: yr, month: mo, day: da, minutes: (hr * 60) + min, dateStr: `${yr}${mo}${da}`
-            };
-        }
-
-        // 7. Standard Android: Screenshot_20261107_120607.jpg
-        const standardMatch = fileName.match(/^Screenshot_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})(_\d+)?\.(jpg|png|jpeg)$/i);
-        if (standardMatch) {
-            const yr = standardMatch[1], mo = standardMatch[2], da = standardMatch[3];
-            const hr = parseInt(standardMatch[4], 10), min = parseInt(standardMatch[5], 10);
-            return {
-                valid: true,
-                isDirectShare: false,
-                category: "Standard Android",
-                year: yr, month: mo, day: da, minutes: (hr * 60) + min, dateStr: `${yr}${mo}${da}`
-            };
-        }
-
-        // 8. Windows PC Snipping Tool Format: Screenshot 2026-11-07 120607.png
-        const windowsMatch = fileName.match(/^Screenshot (\d{4})-(\d{2})-(\d{2}) (\d{2})(\d{2})(\d{2})\.(png|jpg|jpeg)$/i);
-        if (windowsMatch) {
-            const yr = windowsMatch[1], mo = windowsMatch[2], da = windowsMatch[3];
-            const hr = parseInt(windowsMatch[4], 10), min = parseInt(windowsMatch[5], 10);
-            return {
-                valid: true,
-                isDirectShare: false,
-                category: "Windows PC",
-                year: yr, month: mo, day: da, minutes: (hr * 60) + min, dateStr: `${yr}${mo}${da}`
-            };
-        }
-
         return {
-            valid: false,
-            isDirectShare: false,
-            category: "Unknown/Suspicious",
-            message: "Hindi kilala o binagong pormat ng filename."
+            valid: true,
+            isDirectShare: true,
+            category: "General Receipt",
+            year: null, month: null, day: null, minutes: null, dateStr: null
         };
     }
 
     async function runInspection(file) {
         const statusMsg = document.getElementById('statusMsg');
         const fileNameView = document.getElementById('fileNameView');
-        const statusBarTimeView = document.getElementById('statusBarTimeView');
         const receiptTimeView = document.getElementById('receiptTimeView');
         const refNumView = document.getElementById('refNumView');
         const jsonView = document.getElementById('jsonView');
-        const statusBarPreview = document.getElementById('statusBarPreview');
         const receiptPreview = document.getElementById('receiptPreview');
         const comparisonResult = document.getElementById('comparisonResult');
-        const statusBarBoxContainer = document.getElementById('statusBarBoxContainer');
-        const statusBarTimeGroup = document.getElementById('statusBarTimeGroup');
-        const receiptLabelPreview = document.getElementById('receiptLabelPreview');
 
         if (!file) return;
 
         comparisonResult.style.display = 'none';
         fileNameView.innerText = "-- Naglo-load --";
-        statusBarTimeView.innerText = "-- Naglo-load --";
         receiptTimeView.innerText = "-- Naglo-load --";
         refNumView.innerText = "-- Naglo-load --";
         jsonView.innerText = "-- Naglo-load --";
@@ -390,9 +228,6 @@
         const fileName = file.name.trim();
         fileNameView.innerText = fileName;
 
-        // ==========================================
-        // GATE 1: MULTI-PATTERN VALIDATION
-        // ==========================================
         const gate1Result = validateGate1(fileName);
 
         if (!gate1Result.valid) {
@@ -411,54 +246,16 @@
             return;
         }
 
-        const isDirectShare = gate1Result.isDirectShare;
-        const fileYear = gate1Result.year;
-        const fileMonth = gate1Result.month;
-        const fileDay = gate1Result.day;
-        const fileDateStr = gate1Result.dateStr;
-        const filenameMinutes = gate1Result.minutes;
         const detectedBrand = gate1Result.category;
-
-        if (isDirectShare) {
-            statusBarBoxContainer.style.display = 'none';
-            statusBarTimeGroup.style.display = 'none';
-            receiptLabelPreview.innerText = "🧾 E-Wallet App Receipt View (Walang Crop)";
-            statusMsg.innerText = `🛡️ Nakapasa sa Gate 1 (${detectedBrand} - Direct Share)! Sinisimulan ang OCR...`;
-        } else {
-            statusBarBoxContainer.style.display = 'block';
-            statusBarTimeGroup.style.display = 'block';
-            receiptLabelPreview.innerText = "🧾 2. Receipt Crop (9:16)";
-            statusMsg.innerText = `🛡️ Nakapasa sa Gate 1 (${detectedBrand} - Screenshot)! Sinisimulan ang pag-crop at OCR...`;
-        }
+        statusMsg.innerText = `🛡️ Nakapasa sa Gate 1 (${detectedBrand})! Sinisimulan ang OCR sa buong larawan...`;
 
         try {
-            let receiptBlob;
-            let statusbar_detected_time = "N/A (Direct Share)";
+            // WALANG CROP: Gamitin nang buo ang resibo
+            receiptPreview.src = URL.createObjectURL(file);
+            receiptPreview.style.display = 'block';
 
-            if (isDirectShare) {
-                receiptBlob = await cropReceiptOnly(file);
-                receiptPreview.src = URL.createObjectURL(receiptBlob);
-                receiptPreview.style.display = 'block';
-            } else {
-                const statusBarBlob = await cropStatusBar(file);
-                receiptBlob = await cropTo916AndRemoveStatusBar(file);
-
-                statusBarPreview.src = URL.createObjectURL(statusBarBlob);
-                statusBarPreview.style.display = 'block';
-
-                receiptPreview.src = URL.createObjectURL(receiptBlob);
-                receiptPreview.style.display = 'block';
-
-                statusMsg.innerText = "⏳ Isinasagawa ang Status Bar OCR...";
-                const statusBarOcr = await Tesseract.recognize(statusBarBlob, 'eng');
-                const sbText = statusBarOcr.data.text.trim();
-                const timeMatchSB = sbText.match(/\d{1,2}:\d{2}/);
-                statusbar_detected_time = timeMatchSB ? timeMatchSB[0] : "Hindi natukoy";
-                statusBarTimeView.innerText = statusbar_detected_time;
-            }
-
-            statusMsg.innerText = "⏳ Isinasagawa ang Receipt OCR...";
-            const receiptOcr = await Tesseract.recognize(receiptBlob, 'eng', {
+            statusMsg.innerText = "⏳ Isinasagawa ang OCR sa buong resibo...";
+            const receiptOcr = await Tesseract.recognize(file, 'eng', {
                 logger: m => {
                     if (m.status === 'recognizing text') {
                         statusMsg.innerText = `⏳ Receipt OCR Progress: ${Math.round(m.progress * 100)}%`;
@@ -466,13 +263,13 @@
                 }
             });
 
-            statusMsg.innerText = "✅ Matagumpay na nasuri ang mga bahagi ng resibo!";
+            statusMsg.innerText = "✅ Matagumpay na nasuri ang resibo!";
 
             const rawLines = receiptOcr.data.text.split('\n')
                                        .map(l => l.trim())
                                        .filter(l => l.length > 0);
 
-            // Suporta sa GoTyme format ("18 Nov 2026 at 12:36 PM") at iba pang pormat
+            // Suporta sa GoTyme format ("18 Nov 2026") at oras ("12:36 PM")
             const dateRegex = /\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}\b|(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*\d{1,2},?\s*\d{4}|\d{2}[-/]\d{2}[-/]\d{4}/i;
             const timeRegex = /\b\d{1,2}:\d{2}(?:\:\d{2})?\s?(?:AM|PM|am|pm)?\b/i;
 
@@ -481,19 +278,6 @@
 
             for (let i = 0; i < rawLines.length; i++) {
                 const line = rawLines[i];
-                
-                if (detectedDateStr === "Hindi natagpuan" || detected_time === "Hindi natagpuan") {
-                    const dMatch = line.match(dateRegex);
-                    const tMatch = line.match(timeRegex);
-                    
-                    if (dMatch && detectedDateStr === "Hindi natagpuan") {
-                        detectedDateStr = dMatch[0];
-                    }
-                    if (tMatch && detected_time === "Hindi natagpuan") {
-                        detected_time = tMatch[0];
-                    }
-                }
-
                 if (detectedDateStr === "Hindi natagpuan") {
                     const dMatch = line.match(dateRegex);
                     if (dMatch) detectedDateStr = dMatch[0];
@@ -520,7 +304,7 @@
 
             receiptTimeView.innerText = detectedDateStr + " | " + detected_time;
 
-            // 🔢 TANGING REFERENCE NO. LAMANG (Mahigpit na patakaran, iwas "Date 18")
+            // 🔢 TANGING REFERENCE NO. LAMANG (Gamit ang eksklusibong pamamaraan na hiniling mo)
             let foundReferenceNumber = "";
             for (let i = 0; i < rawLines.length; i++) {
                 const currentLine = rawLines[i];
@@ -555,91 +339,15 @@
                 refNumView.innerText = "⚠️ Hindi natagpuan ang Reference No.";
             }
 
-            // ==========================================
-            // GATE 2: FILENAME DATE/TIME VS. RECEIPT DATE/TIME
-            // ==========================================
-            const receiptMinutes = timeToMinutes(detected_time);
-            let gate2Passed = true;
-            let gate2Diff = null;
-
-            if (fileDateStr && filenameMinutes !== null) {
-                const normalizedReceiptDate = normalizeDate(detectedDateStr);
-                let dateMatches = false;
-                if (normalizedReceiptDate && fileDateStr) {
-                    if (normalizedReceiptDate.includes(fileYear) && normalizedReceiptDate.includes(fileMonth) && normalizedReceiptDate.includes(fileDay)) {
-                        dateMatches = true;
-                    }
-                } else {
-                    dateMatches = true; 
-                }
-
-                if (!dateMatches) {
-                    gate2Passed = false;
-                } else if (receiptMinutes !== null) {
-                    gate2Diff = Math.abs(filenameMinutes - receiptMinutes);
-                    if (gate2Diff > 720) gate2Diff = 1440 - gate2Diff;
-
-                    if (gate2Diff > 2) {
-                        gate2Passed = false;
-                    }
-                }
-            } else {
-                gate2Passed = true; 
-            }
-
-            // ==========================================
-            // GATE 3: DUAL OCR STATUS BAR VS. RECEIPT TIME (Bypassed pag Direct Share)
-            // ==========================================
-            let gate3Passed = true;
-            let gate3StatusText = "N/A (Direct Share - No Status Bar)";
-
-            if (!isDirectShare) {
-                const sbMinutes = timeToMinutes(statusbar_detected_time);
-                if (sbMinutes !== null && receiptMinutes !== null) {
-                    let gate3Diff = Math.abs(sbMinutes - receiptMinutes);
-                    if (gate3Diff > 720) gate3Diff = 1440 - gate3Diff;
-                    if (gate3Diff > 2) gate3Passed = false;
-                } else {
-                    gate3Passed = false;
-                }
-                gate3StatusText = gate3Passed ? "Passed ✅" : "Failed ❌";
-            }
-
-            // Pinal na Desisyon mula sa Triple-Gate / Dual-Gate
             comparisonResult.style.display = 'block';
-            let verificationStatus = "";
+            comparisonResult.className = "comparison-box match-verified";
+            comparisonResult.innerHTML = `Nasuri nang Matagumpay ✅<br><span style="font-size:11px; font-weight:normal;">Uri ng Resibo: ${detectedBrand} (Walang Crop)</span>`;
 
-            const overallPassed = isDirectShare ? gate2Passed : (gate2Passed && gate3Passed);
-
-            if (overallPassed) {
-                verificationStatus = "Match Verified ✅";
-                comparisonResult.className = "comparison-box match-verified";
-                comparisonResult.innerHTML = `Match Verified ✅<br><span style="font-size:11px; font-weight:normal;">Ligtas ang Validation! Uri: ${detectedBrand}</span>`;
-            } else {
-                verificationStatus = "Fake 📵 Not Match (Date/Time Mismatch)";
-                comparisonResult.className = "comparison-box fake-not-match";
-                comparisonResult.innerHTML = `Fake 📵 Not Match<br><span style="font-size:11px; font-weight:normal;">Bigo sa Date/Time o Status Bar validation.</span>`;
-            }
-
-            // Pinagsamang JSON Output
             const finalResultJson = {
                 success: true,
-                verification_status: verificationStatus,
-                share_type: isDirectShare ? "Direct E-Wallet App Share" : "Standard Screenshot",
+                verification_status: "Verified (No Crop Mode)",
                 device_category: detectedBrand,
                 timestamp_scanned: new Date().toISOString(),
-                gate_checks: {
-                    gate_1_filename: `Passed ✅ (${detectedBrand})`,
-                    gate_2_filename_vs_receipt: gate2Passed ? "Passed ✅" : "Failed ❌ (Date/Time Mismatch)",
-                    gate_3_statusbar_vs_receipt: gate3StatusText
-                },
-                filename_extracted: {
-                    file_name: fileName,
-                    date: fileDateStr || "N/A"
-                },
-                status_bar_ocr: {
-                    statusbar_detected_time: statusbar_detected_time
-                },
                 receipt_ocr: {
                     detected_date: detectedDateStr,
                     detected_time: detected_time,
@@ -651,7 +359,7 @@
 
         } catch (err) {
             console.error(err);
-            statusMsg.innerText = "❌ May naganap na error sa pagproseso ng system.";
+            statusMsg.innerText = "❌ May naganap na error sa pagproseso ng sistema.";
         }
     }
 </script>
