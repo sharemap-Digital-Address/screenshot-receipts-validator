@@ -36,7 +36,7 @@
         .preview-label { font-size: 10px; color: #38bdf8; margin-bottom: 3px; display: block; }
         .comparison-box { padding: 15px; border-radius: 8px; font-weight: bold; text-align: center; margin-top: 15px; font-size: 14px; display: none; }
         .match-verified { background: #065f46; color: #34d399; border: 1px solid #059669; }
-        .fake-not-match { background: #7f1d1d; color: #fca5a5; border: fca5a5; border: 1px solid #dc2626; }
+        .fake-not-match { background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
     </style>
 </head>
 <body>
@@ -164,7 +164,7 @@
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // Para sa direct share, gamitin ang buong larawan o i-adjust nang walang status bar removal
+                // Para sa direct share, gamitin ang buong larawan nang walang bawas sa itaas
                 canvas.width = img.width;
                 canvas.height = img.height;
                 ctx.drawImage(img, 0, 0);
@@ -385,11 +385,11 @@
         const filenameMinutes = gate1Result.minutes;
         const detectedBrand = gate1Result.category;
 
-        // I-adjust ang UI kung ito ay direct share o screenshot
+        // I-adjust ang UI batay sa uri ng file
         if (isDirectShare) {
             statusBarBoxContainer.style.display = 'none';
             statusBarTimeGroup.style.display = 'none';
-            receiptLabelPreview.innerText = "🧾 E-Wallet App Receipt View";
+            receiptLabelPreview.innerText = "🧾 E-Wallet App Receipt View (Walang Crop)";
             statusMsg.innerText = `🛡️ Nakapasa sa Gate 1 (${detectedBrand} - Direct Share)! Sinisimulan ang OCR...`;
         } else {
             statusBarBoxContainer.style.display = 'block';
@@ -439,7 +439,8 @@
                                        .map(l => l.trim())
                                        .filter(l => l.length > 0);
 
-            const dateRegex = /(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*\d{1,2},?\s*\d{4}|\d{2}[-/]\d{2}[-/]\d{4}/i;
+            // 🔍 PINALAWAK NA REGEX PARA SA MGA PETSA AT ORAS (Kasama ang GoTyme format na "18 Nov 2026 at 12:36 PM")
+            const dateRegex = /\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}\b|(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*\d{1,2},?\s*\d{4}|\d{2}[-/]\d{2}[-/]\d{4}/i;
             const timeRegex = /\b\d{1,2}:\d{2}(?:\:\d{2})?\s?(?:AM|PM|am|pm)?\b/i;
 
             let detectedDateStr = "Hindi natagpuan";
@@ -447,6 +448,21 @@
 
             for (let i = 0; i < rawLines.length; i++) {
                 const line = rawLines[i];
+                
+                // Kung sakaling magkasama sa iisang linya ang Date at Time (tulad ng GoTyme: "Date 18 Nov 2026 at 12:36 PM")
+                if (detectedDateStr === "Hindi natagpuan" || detected_time === "Hindi natagpuan") {
+                    const dMatch = line.match(dateRegex);
+                    const tMatch = line.match(timeRegex);
+                    
+                    if (dMatch && detectedDateStr === "Hindi natagpuan") {
+                        detectedDateStr = dMatch[0];
+                    }
+                    if (tMatch && detected_time === "Hindi natagpuan") {
+                        detected_time = tMatch[0];
+                    }
+                }
+
+                // Fallback sa mga nakaraang lagayan kung hiwalay
                 if (detectedDateStr === "Hindi natagpuan") {
                     const dMatch = line.match(dateRegex);
                     if (dMatch) detectedDateStr = dMatch[0];
@@ -534,7 +550,7 @@
                 }
             }
 
-            // Gate 3 Check (Para lang sa Screenshot, Bypass kung Direct Share)
+            // Gate 3 Check (Bypassed kung Direct Share)
             let gate3Passed = true;
             let gate3StatusText = "N/A (Direct Share - No Status Bar)";
 
@@ -553,7 +569,6 @@
             comparisonResult.style.display = 'block';
             let verificationStatus = "";
 
-            // Pasya: Kung Direct Share, sapat na ang Gate 1 at Gate 2. Kung Screenshot, kailangan lumagpas sa Gate 1, 2, at 3.
             const overallPassed = isDirectShare ? gate2Passed : (gate2Passed && gate3Passed);
 
             if (overallPassed) {
