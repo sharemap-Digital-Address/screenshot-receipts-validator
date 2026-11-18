@@ -36,7 +36,7 @@
         .preview-label { font-size: 10px; color: #38bdf8; margin-bottom: 3px; display: block; }
         .comparison-box { padding: 15px; border-radius: 8px; font-weight: bold; text-align: center; margin-top: 15px; font-size: 14px; display: none; }
         .match-verified { background: #065f46; color: #34d399; border: 1px solid #059669; }
-        .fake-not-match { background: #7f1d1d; color: #fca5a5; border: 1px solid #dc2626; }
+        .fake-not-match { background: #7f1d1d; color: #fca5a5; border: fca5a5; border: 1px solid #dc2626; }
     </style>
 </head>
 <body>
@@ -495,14 +495,14 @@
 
             receiptTimeView.innerText = detectedDateStr + " | " + detected_time;
 
-            // 🛡️ MAHIGPIT NA PAGKUHA NG REFERENCE NUMBER (Inalis ang paghahanap sa Trace ID)
+            // 🛡️ TANGING REFERENCE NO. LAMANG (Inalis ang Trace ID at Invoice Number)
             let foundReferenceNumber = "";
             for (let i = 0; i < rawLines.length; i++) {
                 const currentLine = rawLines[i];
-                const hasKeyword = /Reference\s*(?:No\.?|Number|ID)|Ref\.?\s*No\.?|Payment\s*ID|Invoice\s*number/i.test(currentLine);
+                const hasKeyword = /Reference\s*(?:No\.?|Number|ID)|Ref\.?\s*No\.?|Payment\s*ID/i.test(currentLine);
                 if (hasKeyword) {
                     let candidate = "";
-                    const matchInSameLine = currentLine.match(/(?:Reference\s*(?:No\.?|Number|ID)|Ref\.?\s*No\.?|Payment\s*ID|Invoice\s*number)\s*[:\s]*([A-Z0-9\-\s]{6,30})/i);
+                    const matchInSameLine = currentLine.match(/(?:Reference\s*(?:No\.?|Number|ID)|Ref\.?\s*No\.?|Payment\s*ID)\s*[:\s]*([A-Z0-9\-\s]{6,30})/i);
                     if (matchInSameLine && matchInSameLine[1]) {
                         candidate = matchInSameLine[1].trim();
                     } else if (i + 1 < rawLines.length) {
